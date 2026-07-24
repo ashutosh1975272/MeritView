@@ -11,13 +11,13 @@ export default function AuthLayout({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, isLoading, initializeAuth } = useAuthStore();
+  const { user, isLoading, checkAuth } = useAuthStore();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    initializeAuth();
-  }, [initializeAuth]);
+    checkAuth();
+  }, [checkAuth]);
 
   useEffect(() => {
     if (mounted && !isLoading) {
