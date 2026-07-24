@@ -49,11 +49,11 @@ vi.mock('../../providers', () => {
   const mockGenerateCompletion = vi.fn();
   const mockProvider = {
     name: 'groq',
-    modelId: 'llama-3-70b-8192',
+    modelId: 'llama-3.3-70b-versatile',
     capabilities: { supportsStreaming: false, maxContextTokens: 8192, supportsJsonMode: true, hasTrainingGuarantee: true, dataResidencyRegion: 'US' },
     generateCompletion: mockGenerateCompletion,
     healthCheck: vi.fn(),
-    estimateCost: vi.fn().mockReturnValue({ estimatedUsd: 0.001, inputTokens: 100, outputTokens: 50, model: 'groq/llama-3-70b-8192' }),
+    estimateCost: vi.fn().mockReturnValue({ estimatedUsd: 0.001, inputTokens: 100, outputTokens: 50, model: 'groq/llama-3.3-70b-versatile' }),
   };
 
   const mockRegistry = {
@@ -65,9 +65,9 @@ vi.mock('../../providers', () => {
 
   return {
     ProviderRegistry: vi.fn(() => mockRegistry),
-    createGroqLlama3Provider: vi.fn(() => ({ ...mockProvider, name: 'groq', modelId: 'llama-3-70b-8192' })),
-    createGroqMixtralProvider: vi.fn(() => ({ ...mockProvider, name: 'groq', modelId: 'mixtral-8x7b-32768' })),
-    createGemini15ProProvider: vi.fn(() => ({ ...mockProvider, name: 'gemini', modelId: 'gemini-1.5-pro' })),
+    createGroqLlama3Provider: vi.fn(() => ({ ...mockProvider, name: 'groq', modelId: 'llama-3.3-70b-versatile' })),
+    createGroqMixtralProvider: vi.fn(() => ({ ...mockProvider, name: 'groq', modelId: 'llama-3.1-8b-instant' })),
+    createGemini15ProProvider: vi.fn(() => ({ ...mockProvider, name: 'gemini', modelId: 'gemini-2.0-flash' })),
   };
 });
 
@@ -146,7 +146,7 @@ describe('Evaluation Service', () => {
       const baseResult = {
         id: 'comp_123',
         provider: 'groq',
-        modelId: 'llama-3-70b-8192',
+        modelId: 'llama-3.3-70b-versatile',
         content: '{"strongestArguments": [{"argument": "test", "strength": "strong"}]}',
         finishReason: 'stop',
         inputTokens: 100,
@@ -161,14 +161,14 @@ describe('Evaluation Service', () => {
 
       const mockProvider = evaluationRegistry.get('groq-llama')!;
       (mockProvider.generateCompletion as any)
-        .mockResolvedValueOnce({ ...baseResult, provider: 'groq', modelId: 'llama-3-70b-8192' })
-        .mockResolvedValueOnce({ ...baseResult, provider: 'groq', modelId: 'mixtral-8x7b-32768' })
-        .mockResolvedValueOnce({ ...baseResult, provider: 'gemini', modelId: 'gemini-1.5-pro' });
+        .mockResolvedValueOnce({ ...baseResult, provider: 'groq', modelId: 'llama-3.3-70b-versatile' })
+        .mockResolvedValueOnce({ ...baseResult, provider: 'groq', modelId: 'llama-3.1-8b-instant' })
+        .mockResolvedValueOnce({ ...baseResult, provider: 'gemini', modelId: 'gemini-2.0-flash' });
 
       (prisma.evaluatorOutput.create as any)
-        .mockResolvedValueOnce({ id: 'eval1', llmProvider: 'groq', modelId: 'llama-3-70b-8192', promptVersion: 'eval-v3.2', structuredOutput: {}, parseSuccess: true, inputTokens: 100, outputTokens: 50, costUsd: 0.001, durationMs: 500, attemptNumber: 1 })
-        .mockResolvedValueOnce({ id: 'eval2', llmProvider: 'groq', modelId: 'mixtral-8x7b-32768', promptVersion: 'eval-v3.2', structuredOutput: {}, parseSuccess: true, inputTokens: 100, outputTokens: 50, costUsd: 0.001, durationMs: 500, attemptNumber: 1 })
-        .mockResolvedValueOnce({ id: 'eval3', llmProvider: 'gemini', modelId: 'gemini-1.5-pro', promptVersion: 'eval-v3.2', structuredOutput: {}, parseSuccess: true, inputTokens: 100, outputTokens: 50, costUsd: 0.001, durationMs: 500, attemptNumber: 1 });
+        .mockResolvedValueOnce({ id: 'eval1', llmProvider: 'groq', modelId: 'llama-3.3-70b-versatile', promptVersion: 'eval-v3.2', structuredOutput: {}, parseSuccess: true, inputTokens: 100, outputTokens: 50, costUsd: 0.001, durationMs: 500, attemptNumber: 1 })
+        .mockResolvedValueOnce({ id: 'eval2', llmProvider: 'groq', modelId: 'llama-3.1-8b-instant', promptVersion: 'eval-v3.2', structuredOutput: {}, parseSuccess: true, inputTokens: 100, outputTokens: 50, costUsd: 0.001, durationMs: 500, attemptNumber: 1 })
+        .mockResolvedValueOnce({ id: 'eval3', llmProvider: 'gemini', modelId: 'gemini-2.0-flash', promptVersion: 'eval-v3.2', structuredOutput: {}, parseSuccess: true, inputTokens: 100, outputTokens: 50, costUsd: 0.001, durationMs: 500, attemptNumber: 1 });
 
       const result = await createEvaluationJob({ disputeId: 'disp1', partyId: 'party1' });
 
@@ -211,7 +211,7 @@ describe('Evaluation Service', () => {
         .mockResolvedValueOnce({
           id: 'comp_123',
           provider: 'gemini',
-          modelId: 'gemini-1.5-pro',
+          modelId: 'gemini-2.0-flash',
           content: '{"test": "result"}',
           finishReason: 'stop',
           inputTokens: 100,
@@ -225,9 +225,9 @@ describe('Evaluation Service', () => {
         });
 
       (prisma.evaluatorOutput.create as any)
-        .mockResolvedValueOnce({ id: 'eval1', llmProvider: 'groq', modelId: 'llama-3-70b-8192', structuredOutput: {}, parseSuccess: false, inputTokens: 0, outputTokens: 0, costUsd: 0, durationMs: 0, attemptNumber: 1 })
-        .mockResolvedValueOnce({ id: 'eval2', llmProvider: 'groq', modelId: 'mixtral-8x7b-32768', structuredOutput: {}, parseSuccess: false, inputTokens: 0, outputTokens: 0, costUsd: 0, durationMs: 0, attemptNumber: 1 })
-        .mockResolvedValueOnce({ id: 'eval3', llmProvider: 'gemini', modelId: 'gemini-1.5-pro', structuredOutput: {}, parseSuccess: true, inputTokens: 100, outputTokens: 50, costUsd: 0.001, durationMs: 500, attemptNumber: 1 });
+        .mockResolvedValueOnce({ id: 'eval1', llmProvider: 'groq', modelId: 'llama-3.3-70b-versatile', structuredOutput: {}, parseSuccess: false, inputTokens: 0, outputTokens: 0, costUsd: 0, durationMs: 0, attemptNumber: 1 })
+        .mockResolvedValueOnce({ id: 'eval2', llmProvider: 'groq', modelId: 'llama-3.1-8b-instant', structuredOutput: {}, parseSuccess: false, inputTokens: 0, outputTokens: 0, costUsd: 0, durationMs: 0, attemptNumber: 1 })
+        .mockResolvedValueOnce({ id: 'eval3', llmProvider: 'gemini', modelId: 'gemini-2.0-flash', structuredOutput: {}, parseSuccess: true, inputTokens: 100, outputTokens: 50, costUsd: 0.001, durationMs: 500, attemptNumber: 1 });
 
       const result = await createEvaluationJob({ disputeId: 'disp1', partyId: 'party1' });
 
@@ -263,7 +263,7 @@ describe('Evaluation Service', () => {
         .mockRejectedValue(new Error('All failed'));
 
       (prisma.evaluatorOutput.create as any)
-        .mockResolvedValue({ id: 'eval_fail', parseSuccess: false, llmProvider: 'groq', modelId: 'llama-3-70b-8192', costUsd: 0, durationMs: 0, attemptNumber: 3 });
+        .mockResolvedValue({ id: 'eval_fail', parseSuccess: false, llmProvider: 'groq', modelId: 'llama-3.3-70b-versatile', costUsd: 0, durationMs: 0, attemptNumber: 3 });
 
       await createEvaluationJob({ disputeId: 'disp1', partyId: 'party1' });
 
@@ -301,7 +301,7 @@ describe('Evaluation Service', () => {
         .mockResolvedValue({
           id: 'comp_123',
           provider: 'groq',
-          modelId: 'llama-3-70b-8192',
+          modelId: 'llama-3.3-70b-versatile',
           content: injectionContent,
           finishReason: 'stop',
           inputTokens: 100,
@@ -316,7 +316,7 @@ describe('Evaluation Service', () => {
         .mockResolvedValue({
           id: 'comp_456',
           provider: 'groq',
-          modelId: 'mixtral-8x7b-32768',
+          modelId: 'llama-3.1-8b-instant',
           content: '{"result": "clean"}',
           finishReason: 'stop',
           inputTokens: 100,
@@ -331,7 +331,7 @@ describe('Evaluation Service', () => {
         .mockResolvedValue({
           id: 'comp_789',
           provider: 'gemini',
-          modelId: 'gemini-1.5-pro',
+          modelId: 'gemini-2.0-flash',
           content: '{"result": "clean2"}',
           finishReason: 'stop',
           inputTokens: 100,
@@ -345,9 +345,9 @@ describe('Evaluation Service', () => {
         });
 
       (prisma.evaluatorOutput.create as any)
-        .mockResolvedValueOnce({ id: 'eval1', llmProvider: 'groq', modelId: 'llama-3-70b-8192', parseSuccess: false, costUsd: 0.001, durationMs: 500, attemptNumber: 1 })
-        .mockResolvedValueOnce({ id: 'eval2', llmProvider: 'groq', modelId: 'mixtral-8x7b-32768', parseSuccess: true, costUsd: 0.001, durationMs: 500, attemptNumber: 1 })
-        .mockResolvedValueOnce({ id: 'eval3', llmProvider: 'gemini', modelId: 'gemini-1.5-pro', parseSuccess: true, costUsd: 0.001, durationMs: 500, attemptNumber: 1 });
+        .mockResolvedValueOnce({ id: 'eval1', llmProvider: 'groq', modelId: 'llama-3.3-70b-versatile', parseSuccess: false, costUsd: 0.001, durationMs: 500, attemptNumber: 1 })
+        .mockResolvedValueOnce({ id: 'eval2', llmProvider: 'groq', modelId: 'llama-3.1-8b-instant', parseSuccess: true, costUsd: 0.001, durationMs: 500, attemptNumber: 1 })
+        .mockResolvedValueOnce({ id: 'eval3', llmProvider: 'gemini', modelId: 'gemini-2.0-flash', parseSuccess: true, costUsd: 0.001, durationMs: 500, attemptNumber: 1 });
 
       const result = await createEvaluationJob({ disputeId: 'disp1', partyId: 'party1' });
 
@@ -382,7 +382,7 @@ describe('Evaluation Service', () => {
         .mockResolvedValue({
           id: 'comp_1',
           provider: 'groq',
-          modelId: 'llama-3-70b-8192',
+          modelId: 'llama-3.3-70b-versatile',
           content: '{"result": "ok"}',
           finishReason: 'stop',
           inputTokens: 150,
@@ -397,7 +397,7 @@ describe('Evaluation Service', () => {
         .mockResolvedValue({
           id: 'comp_2',
           provider: 'groq',
-          modelId: 'mixtral-8x7b-32768',
+          modelId: 'llama-3.1-8b-instant',
           content: '{"result": "ok2"}',
           finishReason: 'stop',
           inputTokens: 200,
@@ -412,7 +412,7 @@ describe('Evaluation Service', () => {
         .mockResolvedValue({
           id: 'comp_3',
           provider: 'gemini',
-          modelId: 'gemini-1.5-pro',
+          modelId: 'gemini-2.0-flash',
           content: '{"result": "ok3"}',
           finishReason: 'stop',
           inputTokens: 300,

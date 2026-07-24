@@ -22,9 +22,9 @@ const BACKOFF_2S = 2000;
 const EVALUATOR_TIMEOUT_MS = 60_000;
 
 const providerConfigs = [
-  { providerKey: 'groq-llama', name: 'groq', model: 'llama-3-70b-8192' },
-  { providerKey: 'groq-mixtral', name: 'groq', model: 'mixtral-8x7b-32768' },
-  { providerKey: 'gemini-pro', name: 'gemini', model: 'gemini-1.5-pro' },
+  { providerKey: 'groq-llama', name: 'groq', model: 'llama-3.3-70b-versatile' },
+  { providerKey: 'groq-mixtral', name: 'groq', model: 'llama-3.1-8b-instant' },
+  { providerKey: 'gemini-pro', name: 'gemini', model: 'gemini-2.0-flash' },
   { providerKey: 'gpt-4-turbo', name: 'openai', model: 'gpt-4-turbo' },
   { providerKey: 'claude-3.5-sonnet', name: 'anthropic', model: 'claude-3.5-sonnet' },
 ];

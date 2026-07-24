@@ -46,7 +46,7 @@ export async function checkGeminiHealth(apiKey: string): Promise<HealthStatus> {
     const { GoogleGenerativeAI } = await import('@google/generative-ai');
     const genAI = new GoogleGenerativeAI(apiKey);
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
     await model.generateContent('Health check ping');
 
     const latencyMs = Date.now() - startTime;

@@ -56,7 +56,7 @@ describe('ProviderRegistry', () => {
 
   describe('register and get', () => {
     it('should register a provider and retrieve it', () => {
-      const mockProvider = createMockProvider('groq', 'llama-3-70b');
+      const mockProvider = createMockProvider('groq', 'llama-3.3-70b-versatile');
       registry.register('groq-llama', mockProvider);
 
       const retrieved = registry.get('groq-llama');
@@ -70,7 +70,7 @@ describe('ProviderRegistry', () => {
     });
 
     it('should return undefined for disabled provider', () => {
-      const mockProvider = createMockProvider('groq', 'llama-3-70b');
+      const mockProvider = createMockProvider('groq', 'llama-3.3-70b-versatile');
       registry.register('groq-llama', mockProvider);
       registry.setEnabled('groq-llama', false);
 
@@ -81,7 +81,7 @@ describe('ProviderRegistry', () => {
 
   describe('unregister', () => {
     it('should remove a provider', () => {
-      const mockProvider = createMockProvider('groq', 'llama-3-70b');
+      const mockProvider = createMockProvider('groq', 'llama-3.3-70b-versatile');
       registry.register('groq-llama', mockProvider);
       registry.unregister('groq-llama');
 
@@ -91,7 +91,7 @@ describe('ProviderRegistry', () => {
 
   describe('getAll', () => {
     it('should return all registered providers', () => {
-      const p1 = createMockProvider('groq', 'llama-3-70b');
+      const p1 = createMockProvider('groq', 'llama-3.3-70b-versatile');
       const p2 = createMockProvider('gemini', 'gemini-pro');
       registry.register('groq-llama', p1);
       registry.register('gemini-pro', p2);
@@ -101,7 +101,7 @@ describe('ProviderRegistry', () => {
     });
 
     it('should exclude disabled providers', () => {
-      const p1 = createMockProvider('groq', 'llama-3-70b');
+      const p1 = createMockProvider('groq', 'llama-3.3-70b-versatile');
       const p2 = createMockProvider('gemini', 'gemini-pro');
       registry.register('groq-llama', p1);
       registry.register('gemini-pro', p2);
@@ -115,7 +115,7 @@ describe('ProviderRegistry', () => {
 
   describe('dispatch', () => {
     it('should dispatch to all providers in parallel', async () => {
-      const p1 = createMockProvider('groq', 'llama-3-70b');
+      const p1 = createMockProvider('groq', 'llama-3.3-70b-versatile');
       const p2 = createMockProvider('gemini', 'gemini-pro');
       registry.register('groq-llama', p1);
       registry.register('gemini-pro', p2);
@@ -128,7 +128,7 @@ describe('ProviderRegistry', () => {
     });
 
     it('should return only successful results', async () => {
-      const p1 = createMockProvider('groq', 'llama-3-70b');
+      const p1 = createMockProvider('groq', 'llama-3.3-70b-versatile');
       const p2 = createMockProvider('gemini', 'gemini-pro');
       (p2.generateCompletion as any).mockRejectedValue(new Error('Provider error'));
       registry.register('groq-llama', p1);
@@ -148,7 +148,7 @@ describe('ProviderRegistry', () => {
 
   describe('healthCheck', () => {
     it('should return health from provider', async () => {
-      const mockProvider = createMockProvider('groq', 'llama-3-70b');
+      const mockProvider = createMockProvider('groq', 'llama-3.3-70b-versatile');
       registry.register('groq-llama', mockProvider);
 
       const health = await registry.healthCheck('groq-llama');
@@ -164,7 +164,7 @@ describe('ProviderRegistry', () => {
 
   describe('setEnabled', () => {
     it('should toggle provider enabled state', () => {
-      const mockProvider = createMockProvider('groq', 'llama-3-70b');
+      const mockProvider = createMockProvider('groq', 'llama-3.3-70b-versatile');
       registry.register('groq-llama', mockProvider);
 
       expect(registry.get('groq-llama')).toBeDefined();
@@ -179,7 +179,7 @@ describe('ProviderRegistry', () => {
 
   describe('resetCircuitBreaker', () => {
     it('should reset circuit breaker for a provider', () => {
-      const mockProvider = createMockProvider('groq', 'llama-3-70b');
+      const mockProvider = createMockProvider('groq', 'llama-3.3-70b-versatile');
       registry.register('groq-llama', mockProvider);
 
       expect(() => registry.resetCircuitBreaker('groq-llama')).not.toThrow();

@@ -5,7 +5,7 @@ set -euo pipefail
 # Usage: GEMINI_API_KEY=... ./scripts/test-gemini.sh < dispute-1.json
 
 API_KEY="${GEMINI_API_KEY:?GEMINI_API_KEY not set}"
-MODEL="gemini-1.5-pro"
+MODEL="gemini-2.0-flash"
 URL="https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${API_KEY}"
 
 BRIEF_JSON=$(cat)
@@ -44,5 +44,5 @@ curl -s -w "\n%{http_code}" "$URL" \
   fi
 
   echo "$body" | jq --arg dur "${DURATION_MS}ms" \
-    '{provider: "google", model: "gemini-1.5-pro", duration: $dur, output: .candidates[0].content.parts[0].text | fromjson}'
+    '{provider: "google", model: "gemini-2.0-flash", duration: $dur, output: .candidates[0].content.parts[0].text | fromjson}'
 }

@@ -5,7 +5,7 @@ set -euo pipefail
 # Usage: GROQ_API_KEY=gsk_... ./scripts/test-groq-mixtral.sh < dispute-1.json
 
 API_KEY="${GROQ_API_KEY:?GROQ_API_KEY not set}"
-MODEL="mixtral-8x7b-32768"
+MODEL="llama-3.1-8b-instant"
 URL="https://api.groq.com/openai/v1/chat/completions"
 
 BRIEF_JSON=$(cat)
@@ -43,5 +43,5 @@ curl -s -w "\n%{http_code}" "$URL" \
   fi
 
   echo "$body" | jq --arg dur "${DURATION_MS}ms" \
-    '{provider: "groq", model: "mixtral-8x7b-32768", duration: $dur, output: .choices[0].message.content | fromjson}'
+    '{provider: "groq", model: "llama-3.1-8b-instant", duration: $dur, output: .choices[0].message.content | fromjson}'
 }

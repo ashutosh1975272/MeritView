@@ -21,7 +21,7 @@ export class GroqProvider implements LLMProvider {
     this.client = new Groq({ apiKey });
     this.capabilities = {
       supportsStreaming: false,
-      maxContextTokens: modelId === 'llama-3-70b-8192' ? 8192 : 32768,
+      maxContextTokens: modelId === 'llama-3.3-70b-versatile' ? 8192 : 32768,
       supportsJsonMode: true,
       hasTrainingGuarantee: true,
       dataResidencyRegion: 'US',
@@ -128,9 +128,9 @@ export class GroqProvider implements LLMProvider {
 }
 
 export function createGroqLlama3Provider(apiKey: string): LLMProvider {
-  return new GroqProvider('llama-3-70b-8192', apiKey);
+  return new GroqProvider('llama-3.3-70b-versatile', apiKey);
 }
 
 export function createGroqMixtralProvider(apiKey: string): LLMProvider {
-  return new GroqProvider('mixtral-8x7b-32768', apiKey);
+  return new GroqProvider('llama-3.1-8b-instant', apiKey);
 }

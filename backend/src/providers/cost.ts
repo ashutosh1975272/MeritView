@@ -15,21 +15,21 @@ export interface CostEstimateInput {
 
 const MODEL_PRICING: ModelPricing[] = [
   {
-    modelId: 'llama-3-70b-8192',
+    modelId: 'llama-3.3-70b-versatile',
     provider: 'groq',
     inputTokenPricePer1k: 0.00059,
     outputTokenPricePer1k: 0.00079,
     currency: 'USD',
   },
   {
-    modelId: 'mixtral-8x7b-32768',
+    modelId: 'llama-3.1-8b-instant',
     provider: 'groq',
     inputTokenPricePer1k: 0.00024,
     outputTokenPricePer1k: 0.00029,
     currency: 'USD',
   },
   {
-    modelId: 'gemini-1.5-pro',
+    modelId: 'gemini-2.0-flash',
     provider: 'gemini',
     inputTokenPricePer1k: 0.00125,
     outputTokenPricePer1k: 0.00500,

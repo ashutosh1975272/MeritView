@@ -31,7 +31,7 @@ describe('GeminiProvider', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    provider = new GeminiProvider('gemini-1.5-pro', 'test-api-key');
+    provider = new GeminiProvider('gemini-2.0-flash', 'test-api-key');
   });
 
   describe('generateCompletion', () => {
@@ -51,7 +51,7 @@ describe('GeminiProvider', () => {
       const result = await provider.generateCompletion('Test prompt');
 
       expect(result.provider).toBe('gemini');
-      expect(result.modelId).toBe('gemini-1.5-pro');
+      expect(result.modelId).toBe('gemini-2.0-flash');
       expect(result.content).toBe('{"test": "gemini response"}');
       expect(result.inputTokens).toBe(200);
       expect(result.outputTokens).toBe(100);
@@ -143,7 +143,7 @@ describe('GeminiProvider', () => {
     it('should return cost estimate', () => {
       const cost = provider.estimateCost(1000, 500);
       expect(cost.model).toContain('gemini');
-      expect(cost.model).toContain('gemini-1.5-pro');
+      expect(cost.model).toContain('gemini-2.0-flash');
       expect(cost.estimatedUsd).toBeGreaterThanOrEqual(0);
     });
   });

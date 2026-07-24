@@ -23,9 +23,9 @@ describe('ProviderFallback', () => {
       healthCheck: vi.fn().mockResolvedValue({ healthy: true, lastChecked: new Date() }),
     });
 
-    registry.register('groq-llama', mockProvider('groq', 'llama-3-70b-8192'));
-    registry.register('groq-mixtral', mockProvider('groq', 'mixtral-8x7b-32768'));
-    registry.register('gemini-pro', mockProvider('gemini', 'gemini-1.5-pro'));
+    registry.register('groq-llama', mockProvider('groq', 'llama-3.3-70b-versatile'));
+    registry.register('groq-mixtral', mockProvider('groq', 'llama-3.1-8b-instant'));
+    registry.register('gemini-pro', mockProvider('gemini', 'gemini-2.0-flash'));
   });
 
   it('should try primary first', async () => {

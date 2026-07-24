@@ -126,5 +126,5 @@ export class GeminiProvider implements LLMProvider {
 }
 
 export function createGemini15ProProvider(apiKey: string): LLMProvider {
-  return new GeminiProvider('gemini-1.5-pro', apiKey);
+  return new GeminiProvider('gemini-2.0-flash', apiKey);
 }

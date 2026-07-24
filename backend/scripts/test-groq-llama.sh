@@ -6,7 +6,7 @@ set -euo pipefail
 # Reads brief content from stdin, sends to Groq Llama 3 70B, outputs result JSON
 
 API_KEY="${GROQ_API_KEY:?GROQ_API_KEY not set}"
-MODEL="llama3-70b-8192"
+MODEL="llama-3.3-70b-versatile"
 URL="https://api.groq.com/openai/v1/chat/completions"
 
 BRIEF_JSON=$(cat)
@@ -45,5 +45,5 @@ curl -s -w "\n%{http_code}" "$URL" \
   fi
 
   echo "$body" | jq --arg dur "${DURATION_MS}ms" \
-    '{provider: "groq", model: "llama3-70b-8192", duration: $dur, output: .choices[0].message.content | fromjson}'
+    '{provider: "groq", model: "llama-3.3-70b-versatile", duration: $dur, output: .choices[0].message.content | fromjson}'
 }

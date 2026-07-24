@@ -32,7 +32,7 @@ describe('GroqProvider', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    provider = new GroqProvider('llama-3-70b-8192', 'test-api-key');
+    provider = new GroqProvider('llama-3.3-70b-versatile', 'test-api-key');
   });
 
   describe('generateCompletion', () => {
@@ -46,7 +46,7 @@ describe('GroqProvider', () => {
       const result = await provider.generateCompletion('Test prompt');
 
       expect(result.provider).toBe('groq');
-      expect(result.modelId).toBe('llama-3-70b-8192');
+      expect(result.modelId).toBe('llama-3.3-70b-versatile');
       expect(result.content).toBe('{"test": "response"}');
       expect(result.inputTokens).toBe(100);
       expect(result.outputTokens).toBe(50);
@@ -157,7 +157,7 @@ describe('GroqProvider', () => {
     it('should return cost estimate', () => {
       const cost = provider.estimateCost(1000, 500);
       expect(cost.model).toContain('groq');
-      expect(cost.model).toContain('llama-3-70b-8192');
+      expect(cost.model).toContain('llama-3.3-70b-versatile');
       expect(cost.estimatedUsd).toBeGreaterThanOrEqual(0);
     });
   });
