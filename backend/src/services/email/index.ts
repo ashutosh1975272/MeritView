@@ -1,33 +1,8 @@
-import nodemailer from 'nodemailer';
 import { getEnv } from '../../config/env';
 import { logger } from '../../utils/logger';
-import { InternalError } from '../../utils/errors';
+import { sendEmailAsync } from '../../jobs/email.worker';
 
 const env = getEnv();
-
-let transporter: nodemailer.Transporter | null = null;
-
-function getTransporter(): nodemailer.Transporter {
-  if (!transporter) {
-    if (env.SMTP_HOST && env.SMTP_PORT) {
-      transporter = nodemailer.createTransport({
-        host: env.SMTP_HOST,
-        port: env.SMTP_PORT,
-        secure: env.SMTP_PORT === 465,
-        auth: {
-          user: env.SMTP_USER || '',
-          pass: env.SMTP_PASS || '',
-        },
-      });
-    } else {
-      logger.warn('SMTP not configured, using JSON transport');
-      transporter = nodemailer.createTransport({
-        jsonTransport: true,
-      });
-    }
-  }
-  return transporter;
-}
 
 export interface SendEmailInput {
   to: string;
@@ -37,25 +12,11 @@ export interface SendEmailInput {
 
 export async function sendEmail(input: SendEmailInput): Promise<void> {
   try {
-    const transport = getTransporter();
-    const info = await transport.sendMail({
-      from: `"MeritView" <${env.FROM_EMAIL}>`,
-      to: input.to,
-      subject: input.subject,
-      html: input.html,
-    });
-
-    logger.info('Email sent', {
-      to: input.to,
-      subject: input.subject,
-      messageId: info.messageId,
-    });
+    await sendEmailAsync(input.to, input.subject, input.html);
+    logger.info('Email queued for delivery', { to: input.to, subject: input.subject });
   } catch (error) {
-    logger.error('Failed to send email', error as Error, {
-      to: input.to,
-      subject: input.subject,
-    });
-    throw new InternalError('Failed to send email');
+    logger.error('Failed to queue email', error as Error, { to: input.to, subject: input.subject });
+    throw error;
   }
 }
 

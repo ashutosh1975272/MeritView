@@ -9,6 +9,7 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: '📊' },
   { name: 'Disputes', href: '/disputes', icon: '⚖️' },
   { name: 'Profile', href: '/profile', icon: '👤' },
+  { name: 'Admin', href: '/admin', icon: '🔧' },
 ];
 
 export default function DashboardLayout({
