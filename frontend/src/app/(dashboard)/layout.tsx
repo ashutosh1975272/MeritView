@@ -1,89 +1,78 @@
 'use client';
 
-import { useEffect } from 'react';
+import { ReactNode, useState } from 'react';
 import Link from 'next/link';
-import { useRouter, usePathname } from 'next/navigation';
-import { useAuthStore } from '@/stores/useAuthStore';
 
-const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: '📊' },
-  { name: 'Disputes', href: '/dashboard/disputes', icon: '⚖️' },
-  { name: 'Profile', href: '/dashboard/profile', icon: '👤' },
-];
+interface DashboardLayoutProps {
+  children: ReactNode;
+}
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const { user, logout, isLoading } = useAuthStore();
+export default function DashboardLayout({ children }: DashboardLayoutProps) {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  useEffect(() => {
-    if (!isLoading && !user) {
-      router.push('/login?callbackUrl=' + encodeURIComponent(pathname));
-    }
-  }, [user, isLoading, router, pathname]);
-
-  const handleLogout = async () => {
-    await logout();
-    router.push('/login');
-    router.refresh();
-  };
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    );
-  }
-
-  if (!user) {
-    return null;
-  }
+  const navItems = [
+    { label: 'Dashboard', href: '/dashboard' },
+    { label: 'Disputes', href: '/disputes' },
+    { label: 'Profile', href: '/profile' },
+  ];
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center justify-between px-4">
-          <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-lg">
-            <span className="text-2xl">⚖️</span>
-            <span>MeritView</span>
-          </Link>
-          
-          <nav className="hidden md:flex items-center gap-1" aria-label="Main navigation">
-            {navigation.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  pathname === item.href
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                }`}
-                aria-current={pathname === item.href ? 'page' : undefined}
-              >
-                <span aria-hidden="true">{item.icon}</span>
-                <span>{item.name}</span>
-              </Link>
-            ))}
-          </nav>
+    <div className="min-h-screen bg-gray-50">
+      <header className="bg-white border-b sticky top-0 z-30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <Link href="/dashboard" className="text-xl font-bold text-blue-600">
+              MeritView
+            </Link>
 
-          <div className="flex items-center gap-4">
+            <nav className="hidden md:flex items-center gap-6" aria-label="Dashboard navigation">
+              {navItems.map(item => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors"
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </nav>
+
             <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors focus-visible-ring"
+              className="md:hidden p-2 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={mobileMenuOpen}
             >
-              <span aria-hidden="true">🚪</span>
-              <span>Logout</span>
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {mobileMenuOpen ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                )}
+              </svg>
             </button>
           </div>
         </div>
+
+        {mobileMenuOpen && (
+          <nav className="md:hidden border-t bg-white" aria-label="Mobile navigation">
+            <div className="px-4 py-3 space-y-2">
+              {navItems.map(item => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="block px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+          </nav>
+        )}
       </header>
 
-      <main id="main-content" className="container py-6 px-4" role="main">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {children}
       </main>
     </div>

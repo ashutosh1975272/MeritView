@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
@@ -15,7 +15,7 @@ interface RegisterForm {
   marketingOptIn: boolean;
 }
 
-export default function RegisterPage() {
+const RegisterPage = memo(function RegisterPage() {
   const router = useRouter();
   const { register: registerUser } = useAuthStore();
   const [error, setError] = useState<string | null>(null);
@@ -258,4 +258,6 @@ export default function RegisterPage() {
       </div>
     </div>
   );
-}
+});
+
+export default RegisterPage;

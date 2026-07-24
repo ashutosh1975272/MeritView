@@ -57,17 +57,17 @@ class ApiClient {
           throw new Error('Token refresh failed');
         }
 
-        const data = await response.json();
-        this.accessToken = data.access_token;
-        this.refreshToken = data.refresh_token;
+  const data = await response.json();
+  this.accessToken = data.accessToken;
+  this.refreshToken = data.refreshToken;
 
         if (typeof window !== 'undefined') {
           const stored = localStorage.getItem('auth-storage');
-          if (stored) {
-            const { state } = JSON.parse(stored);
-            state.accessToken = data.access_token;
-            state.refreshToken = data.refresh_token;
-            localStorage.setItem('auth-storage', JSON.stringify({ state }));
+  if (stored) {
+      const { state } = JSON.parse(stored);
+      state.accessToken = data.accessToken;
+      state.refreshToken = data.refreshToken;
+      localStorage.setItem('auth-storage', JSON.stringify({ state }));
           }
         }
       } finally {
@@ -78,7 +78,7 @@ class ApiClient {
     return this.refreshPromise;
   }
 
-  private async request<T>(
+  async request<T>(
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
@@ -159,4 +159,29 @@ class ApiClient {
   }
 }
 
-export const apiClient = new ApiClient(API_URL);
+const client = new ApiClient(API_URL);
+export const apiClient = client;
+
+export async function apiRequest<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  return client.request<T>(endpoint, options);
+}
+
+export async function apiGet<T>(endpoint: string): Promise<T> {
+  return client.get<T>(endpoint);
+}
+
+export async function apiPost<T>(endpoint: string, data?: any): Promise<T> {
+  return client.post<T>(endpoint, data);
+}
+
+export async function apiPatch<T>(endpoint: string, data?: any): Promise<T> {
+  return client.patch<T>(endpoint, data);
+}
+
+export async function apiDelete<T>(endpoint: string): Promise<T> {
+  return client.delete<T>(endpoint);
+}
+
+export async function apiPut<T>(endpoint: string, data?: any): Promise<T> {
+  return client.put<T>(endpoint, data);
+}

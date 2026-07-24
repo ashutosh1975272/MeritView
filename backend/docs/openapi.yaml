@@ -287,7 +287,7 @@ components:
 
     DisputeState:
       type: string
-      enum: [draft, awaiting_counterparty, in_progress, awaiting_briefs, awaiting_counterparty_brief, under_analysis, completed, withdrawn, declined]
+      enum: [draft, brief_submitted, payment_pending, under_analysis, awaiting_aggregation, completed, withdrawn, declined, failed, awaiting_counterparty, in_progress, awaiting_briefs, awaiting_counterparty_brief]
       example: draft
 
     PricingTier:
@@ -604,7 +604,7 @@ components:
           example: groq
         modelId:
           type: string
-          example: llama-3-70b
+          example: llama-3.3-70b-versatile
         promptVersion:
           type: string
           example: eval-v3.2
@@ -1750,3 +1750,380 @@ paths:
                   received:
                     type: boolean
                     example: true
+
+  /admin/disputes:
+    get:
+      summary: List all disputes (admin)
+      operationId: adminListDisputes
+      tags:
+        - Admin
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: state
+          in: query
+          schema:
+            $ref: '#/components/schemas/DisputeState'
+        - name: category
+          in: query
+          schema:
+            $ref: '#/components/schemas/DisputeCategory'
+        - name: dateFrom
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: dateTo
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: cursor
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/DisputeListResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          allOf:
+                            - $ref: '#/components/schemas/Dispute'
+                            - type: object
+                              properties:
+                                _count:
+                                  type: object
+                                  properties:
+                                    evaluatorOutputs:
+                                      type: integer
+                                    briefs:
+                                      type: integer
+                                    payments:
+                                      type: integer
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /admin/disputes/{id}:
+    get:
+      summary: Get dispute detail (admin)
+      operationId: adminGetDisputeDetail
+      tags:
+        - Admin
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  dispute:
+                    allOf:
+                      - $ref: '#/components/schemas/Dispute'
+                      - type: object
+                        properties:
+                          briefs:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Brief'
+                          opinion:
+                            $ref: '#/components/schemas/Opinion'
+                          evaluatorOutputs:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/EvaluatorOutput'
+                          payments:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Payment'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /admin/evaluations/pending:
+    get:
+      summary: List disputes pending aggregation (admin)
+      operationId: adminGetPendingEvaluations
+      tags:
+        - Admin
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        title:
+                          type: string
+                        category:
+                          $ref: '#/components/schemas/DisputeCategory'
+                        state:
+                          type: string
+                        evaluatorOutputCount:
+                          type: integer
+                        successfulEvaluatorOutputs:
+                          type: integer
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /admin/disputes/{id}/aggregate:
+    post:
+      summary: Publish opinion (admin aggregation)
+      operationId: adminPublishOpinion
+      tags:
+        - Admin
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - content
+                - interEvaluatorAgreement
+                - overallConfidence
+                - aggregatorProvider
+                - aggregatorModelId
+                - totalCostUsd
+              properties:
+                content:
+                  type: object
+                  properties:
+                    executiveSummary:
+                      type: string
+                    keyIssues:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          issue:
+                            type: string
+                          agreementLevel:
+                            type: string
+                            enum: [high, medium, low]
+                    partyAAnalysis:
+                      type: object
+                      properties:
+                        strongestArguments:
+                          type: array
+                          items:
+                            type: string
+                        weakestPoints:
+                          type: array
+                          items:
+                            type: string
+                        factualConcerns:
+                          type: array
+                          items:
+                            type: string
+                    partyBAnalysis:
+                      type: object
+                      properties:
+                        strongestArguments:
+                          type: array
+                          items:
+                            type: string
+                        weakestPoints:
+                          type: array
+                          items:
+                            type: string
+                        factualConcerns:
+                          type: array
+                          items:
+                            type: string
+                    comparativeAssessment:
+                      type: string
+                    confidenceIndicators:
+                      type: object
+                      properties:
+                        overallConfidence:
+                          type: number
+                          minimum: 0
+                          maximum: 1
+                        evaluatorAgreement:
+                          type: number
+                          minimum: 0
+                          maximum: 1
+                    suggestedConsiderations:
+                      type: object
+                      properties:
+                        partyA:
+                          type: array
+                          items:
+                            type: string
+                        partyB:
+                          type: array
+                          items:
+                            type: string
+                    disclaimers:
+                      type: array
+                      items:
+                        type: string
+                      minItems: 4
+                interEvaluatorAgreement:
+                  type: number
+                  minimum: 0
+                  maximum: 1
+                overallConfidence:
+                  type: number
+                  minimum: 0
+                  maximum: 1
+                aggregatorProvider:
+                  type: string
+                aggregatorModelId:
+                  type: string
+                  totalCostUsd:
+                    type: number
+                    minimum: 0
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  opinion:
+                    $ref: '#/components/schemas/Opinion'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /disputes/{disputeId}/evaluate:
+    post:
+      summary: Start evaluation of a dispute
+      operationId: startEvaluation
+      tags:
+        - Evaluation
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: disputeId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  disputeId:
+                    type: string
+                  evaluatorOutputs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EvaluatorOutput'
+                  state:
+                    type: string
+                  successCount:
+                    type: integer
+                  failureCount:
+                    type: integer
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /disputes/{disputeId}/evaluation/status:
+    get:
+      summary: Get evaluation status for a dispute
+      operationId: getEvaluationStatus
+      tags:
+        - Evaluation
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: disputeId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  disputeId:
+                    type: string
+                  state:
+                    $ref: '#/components/schemas/DisputeState'
+                  evaluatorOutputCount:
+                    type: integer
+                  evaluatorOutputs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EvaluatorOutput'
+                  totalCost:
+                    type: number
+                  minSuccessful:
+                    type: integer
+                  successCount:
+                    type: integer
+                  failureCount:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'

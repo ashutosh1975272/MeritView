@@ -98,8 +98,8 @@ export const useAuthStore = create<AuthState>()(
           const data = await response.json();
           set({
             user: data.user,
-            accessToken: data.access_token,
-            refreshToken: data.refresh_token,
+            accessToken: data.accessToken,
+            refreshToken: data.refreshToken,
             isAuthenticated: true,
             isLoading: false,
           });
@@ -126,8 +126,8 @@ export const useAuthStore = create<AuthState>()(
           const result = await response.json();
           set({
             user: result.user,
-            accessToken: result.access_token,
-            refreshToken: result.refresh_token,
+            accessToken: result.accessToken,
+            refreshToken: result.refreshToken,
             isAuthenticated: true,
             isLoading: false,
           });
@@ -220,8 +220,8 @@ export const useAuthStore = create<AuthState>()(
 
           const data = await response.json();
           set({
-            accessToken: data.access_token,
-            refreshToken: data.refresh_token,
+            accessToken: data.accessToken,
+            refreshToken: data.refreshToken,
           });
         } catch (err) {
           get().logout();

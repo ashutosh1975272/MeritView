@@ -9,7 +9,7 @@ import { logger } from '../../utils/logger';
 import { UnauthorizedError, ForbiddenError, ConflictError, NotFoundError } from '../../utils/errors';
 import bcrypt from 'bcrypt';
 
-const router = Router();
+const router = Router() as ReturnType<typeof Router>;
 
 const registerSchema = z.object({
   body: z.object({

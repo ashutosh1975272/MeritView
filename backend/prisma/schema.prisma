@@ -22,14 +22,18 @@ enum UserAccountType {
 
 enum DisputeState {
   DRAFT
+  BRIEF_SUBMITTED
+  PAYMENT_PENDING
+  UNDER_ANALYSIS
+  AWAITING_AGGREGATION
+  COMPLETED
+  WITHDRAWN
+  DECLINED
+  FAILED
   AWAITING_COUNTERPARTY
   IN_PROGRESS
   AWAITING_BRIEFS
   AWAITING_COUNTERPARTY_BRIEF
-  UNDER_ANALYSIS
-  COMPLETED
-  WITHDRAWN
-  DECLINED
 }
 
 enum DisputeCategory {
@@ -127,6 +131,7 @@ model User {
   
   @@index([email])
   @@index([createdAt], name: "idx_users_created_at")
+  @@index([deletedAt], name: "idx_users_deleted_at")
   @@map("users")
 }
 
@@ -163,6 +168,7 @@ model Dispute {
   @@index([initiatorUserId], name: "idx_disputes_initiator")
   @@index([state], name: "idx_disputes_state_active")
   @@index([createdAt], name: "idx_disputes_created_at")
+  @@index([initiatorUserId, state, createdAt, id], name: "idx_disputes_list_covering")
   @@map("disputes")
 }
 
@@ -219,9 +225,11 @@ model Brief {
   sealedAt                    DateTime? @map("sealed_at")
   
   sealHash                    String?  @map("seal_hash") @db.VarChar(64)
+  retentionExpiresAt          DateTime? @map("retention_expires_at")
   
   @@index([disputeId], name: "idx_briefs_dispute")
   @@index([status], name: "idx_briefs_status")
+  @@index([retentionExpiresAt], name: "idx_briefs_retention")
   @@map("briefs")
 }
 
