@@ -7,195 +7,389 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum UserRole {
+  STANDARD
+  ADMIN
+  SUPPORT
+}
+
+enum UserAccountType {
+  STANDARD
+  GUEST
+  ADMIN
+  SUPPORT
+}
+
+enum DisputeState {
+  DRAFT
+  AWAITING_COUNTERPARTY
+  IN_PROGRESS
+  AWAITING_BRIEFS
+  AWAITING_COUNTERPARTY_BRIEF
+  UNDER_ANALYSIS
+  COMPLETED
+  WITHDRAWN
+  DECLINED
+}
+
+enum DisputeCategory {
+  CONTRACT_INTERPRETATION
+  SMALL_CLAIMS_ASSESSMENT
+  PARTNERSHIP_CONFLICT
+}
+
+enum PricingTier {
+  STANDARD
+  EXPEDITED
+  EXTENDED
+  REANALYSIS
+}
+
+enum PartyRole {
+  INITIATOR
+  RESPONDENT
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+
+enum BriefStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  SUBMITTED
+}
+
+enum BriefState {
+  DRAFT
+  SUBMITTED
+  SEALED
+}
+
+enum BriefPrepSessionStatus {
+  ACTIVE
+  COMPLETED
+  ABANDONED
+  PURGED
+}
+
+enum EvaluatorOutputParseSuccess {
+  TRUE
+  FALSE
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum DocumentOCRStatus {
+  NOT_REQUESTED
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
 model User {
-  id             String    @id @default(cuid())
-  email          String    @unique @db.VarChar(255)
-  emailVerified  Boolean   @default(false) @map("email_verified")
-  passwordHash   String?   @map("password_hash")
-  displayName    String?   @map("display_name") @db.VarChar(100)
-  role           String    @default("standard") @db.VarChar(20)
-  accountType    String    @default("standard") @map("account_type") @db.VarChar(20)
-  marketingOptIn Boolean   @default(false) @map("marketing_opt_in")
-  preferredLlmProvider String? @map("preferred_llm_provider")
-  createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
-  deletedAt      DateTime? @map("deleted_at")
-  lastLoginAt DateTime? @map("last_login_at")
-  verificationToken String? @map("verification_token") @db.VarChar(64)
-  verificationExpires DateTime? @map("verification_expires")
-  resetToken String? @map("reset_token") @db.VarChar(64)
-  resetExpires DateTime? @map("reset_expires")
-
-  disputes Dispute[]
-  parties  Party[]
-  payments Payment[]
-
-  @@index([role])
+  id                    String         @id @default(uuid())
+  email                 String         @unique @db.VarChar(255)
+  emailVerified         Boolean        @default(false)
+  passwordHash          String?        @db.VarChar(255)
+  displayName           String?        @db.VarChar(100)
+  
+  oauthProvider         String?        @db.VarChar(20)
+  oauthSubject          String?        @db.VarChar(255)
+  totpSecret            String?        @db.VarChar(255)
+  
+  preferredLlmProvider  String?        @db.VarChar(50)
+  marketingOptIn        Boolean        @default(false)
+  timezone              String?        @db.VarChar(50)
+  locale                String         @default("en-US") @db.VarChar(10)
+  
+  accountType           UserAccountType @default(STANDARD)
+  
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  deletedAt             DateTime?
+  lastLoginAt           DateTime?
+  
+  disputes              Dispute[]      @relation("DisputeInitiator")
+  parties               Party[]        @relation("PartyUser")
+  payments              Payment[]
+  documents             Document[]     @relation("DocumentUploader")
+  
+  @@index([email])
+  @@index([createdAt], name: "idx_users_created_at")
   @@map("users")
 }
 
 model Dispute {
-  id                  String    @id @default(cuid())
-  category             String    @default("contract_interpretation") @db.VarChar(50)
-  title                String    @db.VarChar(200)
-  summary              String?
-  estimatedStakesUsd   Decimal?  @map("estimated_stakes_usd") @db.Decimal(12, 2)
-  state                String    @default("draft") @db.VarChar(40)
-  stateChangedAt       DateTime  @default(now()) @map("state_changed_at")
-  pricingTier          String    @default("standard") @map("pricing_tier") @db.VarChar(20)
-  priceUsd             Decimal   @default(49.00) @map("price_usd") @db.Decimal(8, 2)
-  initiatorUserId      String    @map("initiator_user_id")
-  createdAt            DateTime  @default(now()) @map("created_at")
-  updatedAt            DateTime  @updatedAt @map("updated_at")
-  completedAt          DateTime? @map("completed_at")
-  deletedAt            DateTime? @map("deleted_at")
-
-  initiator User      @relation(fields: [initiatorUserId], references: [id])
-  parties   Party[]
-  briefs    Brief[]
-  evaluatorOutputs EvaluatorOutput[]
-  opinion   Opinion?
-  payments  Payment[]
-
-  @@index([initiatorUserId])
-  @@index([state])
+  id                  String          @id @default(uuid())
+  
+  category            DisputeCategory
+  title               String          @db.VarChar(200)
+  summary             String?         @db.Text
+  estimatedStakesUsd  Decimal?        @db.Decimal(12, 2)
+  
+  state               DisputeState    @default(DRAFT)
+  stateChangedAt      DateTime        @default(now())
+  
+  pricingTier         PricingTier     @default(STANDARD)
+  priceUsd            Decimal         @db.Decimal(8, 2)
+  
+  initiatorUserId     String          @map("initiator_user_id")
+  initiator           User            @relation("DisputeInitiator", fields: [initiatorUserId], references: [id])
+  
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  completedAt         DateTime?
+  deletedAt           DateTime?
+  
+  parties             Party[]
+  briefs              Brief[]
+  evaluatorOutputs    EvaluatorOutput[]
+  opinions            Opinion?
+  payments            Payment[]
+  documents           Document[]
+  briefPrepSessions   BriefPrepSession[]
+  
+  @@index([initiatorUserId], name: "idx_disputes_initiator")
+  @@index([state], name: "idx_disputes_state_active")
+  @@index([createdAt], name: "idx_disputes_created_at")
   @@map("disputes")
 }
 
 model Party {
-  id          String   @id @default(cuid())
-  disputeId   String   @map("dispute_id")
-  role        String   @default("initiator") @db.VarChar(20)
-  userId      String?  @map("user_id")
-  briefStatus String   @default("not_started") @map("brief_status") @db.VarChar(20)
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-
-  dispute Dispute @relation(fields: [disputeId], references: [id], onDelete: Cascade)
-  user    User?   @relation(fields: [userId], references: [id])
-  brief   Brief?
-
+  id                      String          @id @default(uuid())
+  disputeId               String          @map("dispute_id")
+  dispute                 Dispute         @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+  role                    PartyRole
+  
+  userId                  String?         @map("user_id")
+  user                    User?           @relation("PartyUser", fields: [userId], references: [id])
+  
+  invitationEmail         String?         @map("invitation_email") @db.VarChar(255)
+  invitationToken         String?         @unique @map("invitation_token") @db.VarChar(64)
+  invitationStatus        InvitationStatus @default(PENDING) @map("invitation_status")
+  invitationSentAt        DateTime?       @map("invitation_sent_at")
+  invitationExpiresAt     DateTime?       @map("invitation_expires_at")
+  invitationAcceptedAt    DateTime?       @map("invitation_accepted_at")
+  
+  briefStatus             BriefStatus     @default(NOT_STARTED) @map("brief_status")
+  
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
+  
+  briefs                  Brief[]
+  briefPrepSessions       BriefPrepSession[]
+  documents               Document[]      @relation("DocumentParty")
+  
   @@unique([disputeId, role])
-  @@index([disputeId])
-  @@index([userId])
+  @@index([disputeId], name: "idx_parties_dispute")
+  @@index([userId], name: "idx_parties_user")
+  @@index([invitationToken], name: "idx_parties_invitation_token")
   @@map("parties")
 }
 
 model Brief {
-  id                       String    @id @default(cuid())
-  partyId                  String    @unique @map("party_id")
-  disputeId                String    @map("dispute_id")
-  encryptedContent         Bytes     @map("encrypted_content")
-  contentEncryptionKeyId   String    @map("content_encryption_key_id") @db.VarChar(64)
-  wordCount                Int       @map("word_count")
-  supportingDocumentIds    String[]  @default([]) @map("supporting_document_ids")
-  status                   String    @default("draft") @db.VarChar(20)
-  createdAt                DateTime  @default(now()) @map("created_at")
-  updatedAt                DateTime  @updatedAt @map("updated_at")
-  submittedAt              DateTime? @map("submitted_at")
-  sealedAt                 DateTime? @map("sealed_at")
-  sealHash                 String?   @map("seal_hash") @db.VarChar(64)
-  retentionExpiresAt       DateTime? @map("retention_expires_at")
-
-  party   Party   @relation(fields: [partyId], references: [id], onDelete: Cascade)
-  dispute Dispute @relation(fields: [disputeId], references: [id], onDelete: Cascade)
-
-  @@index([disputeId])
-  @@index([status])
-  @@index([retentionExpiresAt])
+  id                          String   @id @default(uuid())
+  partyId                     String   @unique @map("party_id")
+  party                       Party    @relation(fields: [partyId], references: [id], onDelete: Cascade)
+  disputeId                   String   @map("dispute_id")
+  dispute                     Dispute  @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+  
+  encryptedContent            Bytes    @map("encrypted_content")
+  contentEncryptionKeyId      String   @map("content_encryption_key_id") @db.VarChar(64)
+  
+  wordCount                   Int      @map("word_count")
+  supportingDocumentIds       String[] @map("supporting_document_ids") @db.Text
+  
+  status                      BriefState @default(DRAFT)
+  
+  createdAt                   DateTime @default(now())
+  updatedAt                   DateTime @updatedAt
+  submittedAt                 DateTime? @map("submitted_at")
+  sealedAt                    DateTime? @map("sealed_at")
+  
+  sealHash                    String?  @map("seal_hash") @db.VarChar(64)
+  
+  @@index([disputeId], name: "idx_briefs_dispute")
+  @@index([status], name: "idx_briefs_status")
   @@map("briefs")
 }
 
+model BriefPrepSession {
+  id                      String                 @id @default(uuid())
+  partyId                 String                 @map("party_id")
+  party                   Party                  @relation(fields: [partyId], references: [id], onDelete: Cascade)
+  disputeId               String                 @map("dispute_id")
+  dispute                 Dispute                @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+  
+  llmProvider             String                 @map("llm_provider") @db.VarChar(50)
+  modelId                 String                 @map("model_id") @db.VarChar(100)
+  
+  encryptedMessages       Bytes                  @map("encrypted_messages")
+  messageCount            Int                    @default(0) @map("message_count")
+  
+  totalInputTokens        Int                    @default(0) @map("total_input_tokens")
+  totalOutputTokens       Int                    @default(0) @map("total_output_tokens")
+  totalCostUsd            Decimal                @default(0) @db.Decimal(8, 4) @map("total_cost_usd")
+  
+  status                  BriefPrepSessionStatus @default(ACTIVE)
+  
+  createdAt               DateTime               @default(now())
+  updatedAt               DateTime               @updatedAt
+  lastActivityAt          DateTime               @default(now()) @map("last_activity_at")
+  completedAt             DateTime?              @map("completed_at")
+  purgeAfter              DateTime?              @map("purge_after")
+  
+  @@index([partyId], name: "idx_brief_sessions_party")
+  @@index([purgeAfter], name: "idx_brief_sessions_purge")
+  @@map("brief_prep_sessions")
+}
+
 model EvaluatorOutput {
-  id                String   @id @default(cuid())
+  id                String   @id @default(uuid())
   disputeId         String   @map("dispute_id")
+  dispute           Dispute  @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+  
   llmProvider       String   @map("llm_provider") @db.VarChar(50)
   modelId           String   @map("model_id") @db.VarChar(100)
+  
   promptVersion     String   @map("prompt_version") @db.VarChar(20)
+  
   structuredOutput  Json     @map("structured_output")
-  rawOutput         String?  @map("raw_output")
+  rawOutput         String?  @map("raw_output") @db.Text
+  
   parseSuccess      Boolean  @map("parse_success")
-  parseErrors       Json?    @map("parse_errors")
+  parseErrors       Json?
+  
   inputTokens       Int      @map("input_tokens")
   outputTokens      Int      @map("output_tokens")
   costUsd           Decimal  @map("cost_usd") @db.Decimal(8, 4)
   durationMs        Int      @map("duration_ms")
+  
   attemptNumber     Int      @default(1) @map("attempt_number")
-  createdAt         DateTime @default(now()) @map("created_at")
-
-  dispute Dispute @relation(fields: [disputeId], references: [id], onDelete: Cascade)
-
-  @@index([disputeId])
+  
+  createdAt         DateTime @default(now())
+  
+  @@index([disputeId], name: "idx_eval_outputs_dispute")
+  @@index([llmProvider, modelId], name: "idx_eval_outputs_provider")
   @@map("evaluator_outputs")
 }
 
 model Opinion {
-  id                       String    @id @default(cuid())
-  disputeId                String    @unique @map("dispute_id")
-  encryptedContent         Bytes     @map("encrypted_content")
-  contentEncryptionKeyId   String    @map("content_encryption_key_id") @db.VarChar(64)
-  evalPromptVersion        String    @map("eval_prompt_version") @db.VarChar(20)
-  aggPromptVersion         String    @map("agg_prompt_version") @db.VarChar(20)
-  evaluatorOutputIds       String[]  @map("evaluator_output_ids")
-  interEvaluatorAgreement  Decimal?  @map("inter_evaluator_agreement") @db.Decimal(4, 3)
-  overallConfidence        Decimal?  @map("overall_confidence") @db.Decimal(4, 3)
-  aggregatorProvider       String    @map("aggregator_provider") @db.VarChar(50)
-  aggregatorModelId        String    @map("aggregator_model_id") @db.VarChar(100)
-  totalCostUsd             Decimal   @map("total_cost_usd") @db.Decimal(8, 4)
-  pdfStorageKey             String?  @map("pdf_storage_key") @db.VarChar(255)
-  pdfGeneratedAt            DateTime? @map("pdf_generated_at")
-  retentionExpiresAt        DateTime? @map("retention_expires_at")
-  createdAt                 DateTime @default(now()) @map("created_at")
-  deliveredAt                DateTime? @map("delivered_at")
-
-  dispute Dispute @relation(fields: [disputeId], references: [id], onDelete: Cascade)
-
-  @@index([createdAt(sort: Desc)])
-  @@index([retentionExpiresAt])
+  id                          String   @id @default(uuid())
+  disputeId                   String   @unique @map("dispute_id")
+  dispute                     Dispute  @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+  
+  encryptedContent            Bytes    @map("encrypted_content")
+  contentEncryptionKeyId      String   @map("content_encryption_key_id") @db.VarChar(64)
+  
+  evalPromptVersion           String   @map("eval_prompt_version") @db.VarChar(20)
+  aggPromptVersion            String   @map("agg_prompt_version") @db.VarChar(20)
+  
+  evaluatorOutputIds          String[] @map("evaluator_output_ids") @db.Text
+  
+  interEvaluatorAgreement     Decimal? @map("inter_evaluator_agreement") @db.Decimal(4, 3)
+  overallConfidence           Decimal? @map("overall_confidence") @db.Decimal(4, 3)
+  
+  aggregatorProvider          String   @map("aggregator_provider") @db.VarChar(50)
+  aggregatorModelId           String   @map("aggregator_model_id") @db.VarChar(100)
+  
+  totalCostUsd                Decimal  @map("total_cost_usd") @db.Decimal(8, 4)
+  
+  pdfStorageKey               String?  @map("pdf_storage_key") @db.VarChar(255)
+  pdfGeneratedAt              DateTime? @map("pdf_generated_at")
+  
+  createdAt                   DateTime @default(now())
+  deliveredAt                 DateTime? @map("delivered_at")
+  
+  @@index([createdAt], name: "idx_opinions_created")
   @@map("opinions")
 }
 
+model Document {
+  id                      String            @id @default(uuid())
+  disputeId               String            @map("dispute_id")
+  dispute                 Dispute           @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+  uploadedByUserId        String            @map("uploaded_by_user_id")
+  uploadedByUser          User              @relation("DocumentUploader", fields: [uploadedByUserId], references: [id])
+  uploadedByPartyId       String            @map("uploaded_by_party_id")
+  uploadedByParty         Party             @relation("DocumentParty", fields: [uploadedByPartyId], references: [id])
+  
+  filename                String            @db.VarChar(255)
+  sizeBytes               BigInt            @map("size_bytes")
+  mimeType                String            @map("mime_type") @db.VarChar(100)
+  
+  storageKey              String            @map("storage_key") @db.VarChar(255)
+  storageBucket           String            @map("storage_bucket") @db.VarChar(100)
+  encryptionKeyId         String            @map("encryption_key_id") @db.VarChar(64)
+  
+  ocrStatus               DocumentOCRStatus @default(NOT_REQUESTED) @map("ocr_status")
+  extractedTextStorageKey String?           @map("extracted_text_storage_key") @db.VarChar(255)
+  
+  description             String?           @db.Text
+  
+  createdAt               DateTime          @default(now())
+  deletedAt               DateTime?
+  
+  @@index([disputeId], name: "idx_documents_dispute")
+  @@index([uploadedByPartyId], name: "idx_documents_party")
+  @@map("documents")
+}
+
 model Payment {
-  id                    String    @id @default(cuid())
-  disputeId             String    @map("dispute_id")
-  userId                String    @map("user_id")
-  amountUsd             Decimal   @map("amount_usd") @db.Decimal(8, 2)
-  currency              String    @default("USD") @db.VarChar(3)
-  processor             String    @default("stripe") @db.VarChar(20)
-  processorPaymentId    String    @unique @map("processor_payment_id") @db.VarChar(255)
-  status                String    @db.VarChar(20)
-  refundedAmountUsd     Decimal   @default(0) @map("refunded_amount_usd") @db.Decimal(8, 2)
-  refundReason          String?   @map("refund_reason")
-  refundedAt            DateTime? @map("refunded_at")
-  idempotencyKey        String?   @unique @map("idempotency_key") @db.VarChar(64)
-  createdAt             DateTime  @default(now()) @map("created_at")
-  updatedAt             DateTime  @updatedAt @map("updated_at")
-  completedAt           DateTime? @map("completed_at")
-
-  dispute Dispute @relation(fields: [disputeId], references: [id])
-  user    User    @relation(fields: [userId], references: [id])
-
-  @@index([disputeId])
-  @@index([userId])
+  id                      String         @id @default(uuid())
+  disputeId               String         @map("dispute_id")
+  dispute                 Dispute        @relation(fields: [disputeId], references: [id])
+  userId                  String         @map("user_id")
+  user                    User           @relation(fields: [userId], references: [id])
+  
+  amountUsd               Decimal        @map("amount_usd") @db.Decimal(8, 2)
+  currency                String         @default("USD") @db.VarChar(3)
+  
+  processor               String         @default("stripe") @db.VarChar(20)
+  processorPaymentId      String         @unique @map("processor_payment_id") @db.VarChar(255)
+  processorChargeId       String?        @map("processor_charge_id") @db.VarChar(255)
+  
+  status                  PaymentStatus
+  
+  refundedAmountUsd       Decimal        @default(0) @map("refunded_amount_usd") @db.Decimal(8, 2)
+  refundReason            String?        @map("refund_reason") @db.Text
+  refundedAt              DateTime?      @map("refunded_at")
+  
+  idempotencyKey          String?        @unique @map("idempotency_key") @db.VarChar(64)
+  
+  createdAt               DateTime       @default(now())
+  updatedAt               DateTime       @updatedAt
+  completedAt             DateTime?      @map("completed_at")
+  
+  @@index([disputeId], name: "idx_payments_dispute")
+  @@index([userId], name: "idx_payments_user")
   @@map("payments")
 }
 
 model AuditEvent {
-  id           String   @id @default(cuid())
-  eventType    String   @map("event_type") @db.VarChar(50)
-  actorType    String   @map("actor_type") @db.VarChar(20)
-  actorId      String?  @map("actor_id")
-  resourceType String?  @map("resource_type") @db.VarChar(40)
-  resourceId   String?  @map("resource_id")
-  eventData    Json     @default("{}") @map("event_data")
-  ipAddress    String?  @map("ip_address")
-  userAgent    String?  @map("user_agent")
-  requestId    String?  @map("request_id")
-  prevEventId  String?  @map("prev_event_id")
-  signature    String   @db.VarChar(64)
-  createdAt    DateTime @default(now()) @map("created_at")
-
-  @@index([resourceType, resourceId])
-  @@index([eventType, createdAt])
+  id            String   @id @default(uuid())
+  userId        String?  @map("user_id")
+  eventType     String   @map("event_type") @db.VarChar(100)
+  entityType    String   @map("entity_type") @db.VarChar(50)
+  entityId      String   @map("entity_id") @db.VarChar(40)
+  metadata      Json?
+  ipAddress     String?  @map("ip_address") @db.VarChar(45)
+  userAgent     String?  @map("user_agent") @db.Text
+  createdAt     DateTime @default(now())
+  
+  @@index([userId], name: "idx_audit_events_user")
+  @@index([entityType, entityId], name: "idx_audit_events_entity")
+  @@index([createdAt], name: "idx_audit_events_created")
   @@map("audit_events")
 }

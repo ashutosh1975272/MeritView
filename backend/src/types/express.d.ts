@@ -1,9 +1,16 @@
-export {};
+import 'express';
+
 declare global {
   namespace Express {
     interface Request {
-      user?: { sub: string; admin?: boolean; support?: boolean };
       requestId?: string;
+      user?: {
+        id: string;
+        email: string;
+        role: string;
+        accountType: string;
+        emailVerified: boolean;
+      };
     }
   }
 }

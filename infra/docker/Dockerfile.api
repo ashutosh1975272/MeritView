@@ -1,3 +1,0 @@
-# See backend/Dockerfile — canonical multi-stage build lives there.
-# This file is a symlink-equivalent placeholder for infra tooling that expects
-# infra/docker/Dockerfile.api

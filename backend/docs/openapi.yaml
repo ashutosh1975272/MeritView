@@ -1,0 +1,1752 @@
+openapi: 3.0.3
+info:
+  title: MeritView API
+  version: 1.0.0
+  description: AI Decision Support Platform API
+  contact:
+    name: MeritView API Support
+    url: https://meritview.app/support
+    email: api@meritview.app
+  license:
+    name: Proprietary
+servers:
+  - url: http://localhost:3001/v1
+    description: Development server
+  - url: https://api.staging.meritview.app/v1
+    description: Staging server
+  - url: https://api.meritview.app/v1
+    description: Production server
+
+security:
+  - BearerAuth: []
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: VALIDATION_ERROR
+            message:
+              type: string
+              example: Request validation failed
+            details:
+              type: object
+              additionalProperties:
+                type: array
+                items:
+                  type: string
+            requestId:
+              type: string
+              example: req_abc123
+            documentationUrl:
+              type: string
+              format: uri
+              example: https://docs.meritview.app/errors/validation-error
+          required:
+            - code
+            - message
+            - requestId
+            - documentationUrl
+          description: Standard error envelope
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^user_[a-z0-9]{8}$
+          example: user_8f3a1b2c
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        displayName:
+          type: string
+          maxLength: 100
+          example: Jane Doe
+        emailVerified:
+          type: boolean
+          example: true
+        accountType:
+          type: string
+          enum: [STANDARD, ADMIN, SUPPORT]
+          example: STANDARD
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-05-17T10:30:00Z"
+        stats:
+          type: object
+          properties:
+            disputesInitiated:
+              type: integer
+              example: 3
+            disputesParticipated:
+              type: integer
+              example: 5
+          required:
+            - disputesInitiated
+            - disputesParticipated
+      required:
+        - id
+        - email
+        - emailVerified
+        - accountType
+        - createdAt
+
+    RegisterRequest:
+      type: object
+      required:
+        - email
+        - password
+        - acceptTerms
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          example: user@example.com
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+          pattern: '^(?=.*[A-Za-z])(?=.*\d)'
+          example: securePassword123
+        displayName:
+          type: string
+          maxLength: 100
+          example: Jane Doe
+        acceptTerms:
+          type: boolean
+          enum: [true]
+        marketingOptIn:
+          type: boolean
+          default: false
+          example: false
+
+    RegisterResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        accessToken:
+          type: string
+          example: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
+        refreshToken:
+          type: string
+          example: rt_abc123...
+        expiresIn:
+          type: integer
+          example: 900
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 255
+        password:
+          type: string
+
+    LoginResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        expiresIn:
+          type: integer
+          example: 900
+
+    VerifyEmailRequest:
+      type: object
+      required:
+        - token
+      properties:
+        token:
+          type: string
+
+    VerifyEmailResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Email verified successfully
+
+    RefreshRequest:
+      type: object
+      required:
+        - refreshToken
+      properties:
+        refreshToken:
+          type: string
+
+    RefreshResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        expiresIn:
+          type: integer
+          example: 900
+
+    LogoutRequest:
+      type: object
+      required:
+        - refreshToken
+      properties:
+        refreshToken:
+          type: string
+
+    LogoutResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Logged out successfully
+
+    PasswordResetRequest:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+
+    PasswordResetRequestResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: If the email exists, a reset link has been sent
+
+    PasswordResetComplete:
+      type: object
+      required:
+        - token
+        - password
+      properties:
+        token:
+          type: string
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+          pattern: '^(?=.*[A-Za-z])(?=.*\d)'
+
+    PasswordResetCompleteResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Password reset successful
+
+    UpdateMeRequest:
+      type: object
+      properties:
+        displayName:
+          type: string
+          maxLength: 100
+        marketingOptIn:
+          type: boolean
+        preferredLlmProvider:
+          type: string
+
+    DeleteMeResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Account deletion initiated
+
+    DisputeCategory:
+      type: string
+      enum: [contract_interpretation, small_claims_assessment, partnership_conflict]
+      example: contract_interpretation
+
+    DisputeState:
+      type: string
+      enum: [draft, awaiting_counterparty, in_progress, awaiting_briefs, awaiting_counterparty_brief, under_analysis, completed, withdrawn, declined]
+      example: draft
+
+    PricingTier:
+      type: string
+      enum: [standard, expedited, extended, reanalysis]
+      example: standard
+
+    PartyRole:
+      type: string
+      enum: [initiator, respondent]
+      example: initiator
+
+    BriefStatus:
+      type: string
+      enum: [not_started, in_progress, submitted]
+      example: not_started
+
+    Party:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^party_[a-z0-9]{3}$
+          example: party_001
+        role:
+          $ref: '#/components/schemas/PartyRole'
+        userId:
+          type: string
+          nullable: true
+          pattern: ^user_[a-z0-9]{8}$
+          example: user_8f3a1b2c
+        invitationEmail:
+          type: string
+          format: email
+          nullable: true
+        invitationStatus:
+          type: string
+          enum: [pending, accepted, declined, expired]
+          nullable: true
+        briefStatus:
+          $ref: '#/components/schemas/BriefStatus'
+      required:
+        - id
+        - role
+        - briefStatus
+
+    Dispute:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^disp_[a-z0-9]{6}$
+          example: disp_abc123
+        category:
+          $ref: '#/components/schemas/DisputeCategory'
+        title:
+          type: string
+          maxLength: 200
+          example: Client refusing to pay $8,500 consulting invoice
+        summary:
+          type: string
+          maxLength: 500
+          nullable: true
+          example: Client claims scope was exceeded; contract language is ambiguous
+        estimatedStakesUsd:
+          type: number
+          format: decimal
+          nullable: true
+          example: 8500
+        state:
+          $ref: '#/components/schemas/DisputeState'
+        pricingTier:
+          $ref: '#/components/schemas/PricingTier'
+        priceUsd:
+          type: number
+          format: decimal
+          example: 99.00
+        parties:
+          type: array
+          items:
+            $ref: '#/components/schemas/Party'
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-05-17T10:30:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2026-05-17T10:30:00Z"
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - id
+        - category
+        - title
+        - state
+        - pricingTier
+        - priceUsd
+        - parties
+        - createdAt
+        - updatedAt
+
+    CreateDisputeRequest:
+      type: object
+      required:
+        - category
+        - title
+      properties:
+        category:
+          $ref: '#/components/schemas/DisputeCategory'
+        title:
+          type: string
+          minLength: 5
+          maxLength: 200
+        summary:
+          type: string
+          maxLength: 500
+        estimatedStakesUsd:
+          type: number
+          format: decimal
+          minimum: 0
+        counterparty:
+          type: object
+          properties:
+            email:
+              type: string
+              format: email
+            displayNameForInvitation:
+              type: string
+              maxLength: 100
+          required:
+            - email
+        pricingTier:
+          $ref: '#/components/schemas/PricingTier'
+          default: standard
+
+    CreateDisputeResponse:
+      type: object
+      properties:
+        dispute:
+          $ref: '#/components/schemas/Dispute'
+        paymentIntent:
+          type: object
+          properties:
+            clientSecret:
+              type: string
+              example: pi_xyz_secret_abc...
+          required:
+            - clientSecret
+
+    DisputeListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Dispute'
+        pagination:
+          type: object
+          properties:
+            nextCursor:
+              type: string
+              nullable: true
+            hasMore:
+              type: boolean
+          required:
+            - nextCursor
+            - hasMore
+
+    DisputeDetailResponse:
+      type: object
+      properties:
+        dispute:
+          allOf:
+            - $ref: '#/components/schemas/Dispute'
+            - type: object
+              properties:
+                briefs:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Brief'
+                opinion:
+                  $ref: '#/components/schemas/Opinion'
+                evaluatorOutputs:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/EvaluatorOutput'
+                payments:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Payment'
+
+    UpdateDisputeRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 5
+          maxLength: 200
+        summary:
+          type: string
+          maxLength: 500
+        estimatedStakesUsd:
+          type: number
+          format: decimal
+          minimum: 0
+
+    WithdrawResponse:
+      type: object
+      properties:
+        dispute:
+          $ref: '#/components/schemas/Dispute'
+
+    BriefSection:
+      type: string
+      enum: [factual_background, my_position, supporting_arguments, acknowledgment_of_opposing, desired_resolution]
+
+    Brief:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^brief_[a-z0-9]{3}$
+          example: brief_abc
+        partyId:
+          type: string
+          pattern: ^party_[a-z0-9]{3}$
+        sections:
+          type: object
+          properties:
+            factual_background:
+              type: string
+            my_position:
+              type: string
+            supporting_arguments:
+              type: string
+            acknowledgment_of_opposing:
+              type: string
+            desired_resolution:
+              type: string
+          required:
+            - factual_background
+            - my_position
+            - supporting_arguments
+            - acknowledgment_of_opposing
+            - desired_resolution
+        wordCount:
+          type: integer
+          example: 1247
+        supportingDocumentIds:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [draft, submitted, sealed]
+        createdAt:
+          type: string
+          format: date-time
+        submittedAt:
+          type: string
+          format: date-time
+          nullable: true
+        sealedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    SaveDraftRequest:
+      type: object
+      properties:
+        sections:
+          type: object
+          properties:
+            factual_background:
+              type: string
+            my_position:
+              type: string
+            supporting_arguments:
+              type: string
+            acknowledgment_of_opposing:
+              type: string
+            desired_resolution:
+              type: string
+        supportingDocumentIds:
+          type: array
+          items:
+            type: string
+
+    SubmitBriefResponse:
+      type: object
+      properties:
+        brief:
+          $ref: '#/components/schemas/Brief'
+        disputeState:
+          $ref: '#/components/schemas/DisputeState'
+        nextAction:
+          type: string
+          example: We've notified the other party. You'll be notified when both briefs are in.
+
+    EvaluatorOutput:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^eval_[a-z0-9]{3}$
+          example: eval_aaa
+        disputeId:
+          type: string
+        llmProvider:
+          type: string
+          example: groq
+        modelId:
+          type: string
+          example: llama-3-70b
+        promptVersion:
+          type: string
+          example: eval-v3.2
+        structuredOutput:
+          type: object
+          properties:
+            strongestArguments:
+              type: array
+              items:
+                type: object
+                properties:
+                  argument:
+                    type: string
+                  strength:
+                    type: string
+            weakestPoints:
+              type: array
+              items:
+                type: object
+                properties:
+                  point:
+                    type: string
+                  weakness:
+                    type: string
+            factualClaimsNeedingVerification:
+              type: array
+              items:
+                type: string
+            logicalFallacies:
+              type: array
+              items:
+                type: string
+            overallAssessment:
+              type: string
+            considerations:
+              type: array
+              items:
+                type: string
+            confidenceScore:
+              type: integer
+              minimum: 1
+              maximum: 10
+          required:
+            - strongestArguments
+            - weakestPoints
+            - factualClaimsNeedingVerification
+            - logicalFallacies
+            - overallAssessment
+            - considerations
+            - confidenceScore
+        rawOutput:
+          type: string
+          nullable: true
+        parseSuccess:
+          type: boolean
+        inputTokens:
+          type: integer
+        outputTokens:
+          type: integer
+        costUsd:
+          type: number
+          format: decimal
+        durationMs:
+          type: integer
+        attemptNumber:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    Opinion:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^op_[a-z0-9]{3}$
+          example: op_xyz
+        disputeId:
+          type: string
+        generatedAt:
+          type: string
+          format: date-time
+        promptVersion:
+          type: string
+          example: eval-v3.2, agg-v2.1
+        evaluatorsUsed:
+          type: array
+          items:
+            type: string
+            example: anthropic/claude-3-5-sonnet
+        executiveSummary:
+          type: string
+        keyIssues:
+          type: array
+          items:
+            type: object
+            properties:
+              issue:
+                type: string
+              agreementLevel:
+                type: string
+                enum: [high, medium, low]
+        partyAAnalysis:
+          type: object
+          properties:
+            strongestArguments:
+              type: array
+              items:
+                type: string
+            weakestPoints:
+              type: array
+              items:
+                type: string
+            factualConcerns:
+              type: array
+              items:
+                type: string
+        partyBAnalysis:
+          type: object
+          properties:
+            strongestArguments:
+              type: array
+              items:
+                type: string
+            weakestPoints:
+              type: array
+              items:
+                type: string
+            factualConcerns:
+              type: array
+              items:
+                type: string
+        comparativeAssessment:
+          type: string
+        confidenceIndicators:
+          type: object
+          properties:
+            overallConfidence:
+              type: number
+              format: float
+              minimum: 0
+              maximum: 1
+            evaluatorAgreement:
+              type: number
+              format: float
+              minimum: 0
+              maximum: 1
+          required:
+            - overallConfidence
+            - evaluatorAgreement
+        suggestedConsiderations:
+          type: object
+          properties:
+            partyA:
+              type: array
+              items:
+                type: string
+            partyB:
+              type: array
+              items:
+                type: string
+        disclaimers:
+          type: array
+          items:
+            type: string
+          minItems: 4
+          example:
+            - "This is AI-generated analysis, not legal advice."
+            - "This opinion does not constitute a binding judgment or arbitration award."
+            - "Consult a qualified attorney for legal advice specific to your situation."
+            - "Analysis is based on the information provided and may not reflect all relevant facts or legal nuances."
+
+    Payment:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^pay_[a-z0-9]{3}$
+          example: pay_bbb
+        disputeId:
+          type: string
+        userId:
+          type: string
+        amountUsd:
+          type: number
+          format: decimal
+          example: 99.00
+        currency:
+          type: string
+          default: USD
+        processor:
+          type: string
+          default: stripe
+        processorPaymentId:
+          type: string
+        status:
+          type: string
+          enum: [pending, succeeded, failed, refunded, partially_refunded]
+        refundedAmountUsd:
+          type: number
+          format: decimal
+          default: 0
+        refundReason:
+          type: string
+          nullable: true
+        refundedAt:
+          type: string
+          format: date-time
+          nullable: true
+        idempotencyKey:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    PaymentIntentResponse:
+      type: object
+      properties:
+        clientSecret:
+          type: string
+          example: pi_xyz_secret_abc...
+
+    ConfirmPaymentResponse:
+      type: object
+      properties:
+        dispute:
+          $ref: '#/components/schemas/Dispute'
+
+    PaymentHistoryResponse:
+      type: object
+      properties:
+        payments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Payment'
+
+    OpinionStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [in_progress, completed, failed]
+        progress:
+          type: object
+          properties:
+            evaluatorsComplete:
+              type: integer
+              example: 3
+            evaluatorsTotal:
+              type: integer
+              example: 5
+            aggregationStatus:
+              type: string
+              enum: [pending, in_progress, completed]
+          required:
+            - evaluatorsComplete
+            - evaluatorsTotal
+            - aggregationStatus
+        estimatedCompletion:
+          type: string
+          format: date-time
+          nullable: true
+
+  responses:
+    UnauthorizedError:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: UNAUTHORIZED
+              message: Invalid or expired token
+              requestId: req_xyz789
+              documentationUrl: https://docs.meritview.app/errors/unauthorized
+
+    ForbiddenError:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: FORBIDDEN
+              message: Email verification required
+              requestId: req_xyz789
+              documentationUrl: https://docs.meritview.app/errors/forbidden
+
+    NotFoundError:
+      description: Not Found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: NOT_FOUND
+              message: The requested dispute does not exist or you do not have access
+              details:
+                dispute_id: disp_abc123
+              requestId: req_xyz789
+              documentationUrl: https://docs.meritview.app/errors/not-found
+
+    ConflictError:
+      description: Conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: CONFLICT
+              message: Dispute already has an active payment intent
+              requestId: req_xyz789
+              documentationUrl: https://docs.meritview.app/errors/conflict
+
+    ValidationError:
+      description: Validation Error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: VALIDATION_ERROR
+              message: Request validation failed
+              details:
+                email:
+                  - Invalid email format
+                password:
+                  - Password must be at least 8 characters
+              requestId: req_xyz789
+              documentationUrl: https://docs.meritview.app/errors/validation-error
+
+    RateLimitError:
+      description: Too Many Requests
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: RATE_LIMITED
+              message: Too many requests
+              details:
+                retryAfter: 60
+              requestId: req_xyz789
+              documentationUrl: https://docs.meritview.app/errors/rate-limited
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+            example: 60
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      operationId: healthCheck
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /version:
+    get:
+      summary: Get API version
+      operationId: getVersion
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  version:
+                    type: string
+                  name:
+                    type: string
+
+  /auth/register:
+    post:
+      summary: Register a new user
+      operationId: registerUser
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+
+  /auth/login:
+    post:
+      summary: Log in
+      operationId: loginUser
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+
+  /auth/verify-email:
+    post:
+      summary: Verify email address
+      operationId: verifyEmail
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyEmailRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifyEmailResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  /auth/refresh:
+    post:
+      summary: Refresh access token
+      operationId: refreshToken
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /auth/logout:
+    post:
+      summary: Log out
+      operationId: logoutUser
+      tags:
+        - Authentication
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogoutResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /auth/password-reset/request:
+    post:
+      summary: Request password reset
+      operationId: requestPasswordReset
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PasswordResetRequestResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  /auth/password-reset/complete:
+    post:
+      summary: Complete password reset
+      operationId: completePasswordReset
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetComplete'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PasswordResetCompleteResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  /users/me:
+    get:
+      summary: Get current user profile
+      operationId: getCurrentUser
+      tags:
+        - Users
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    patch:
+      summary: Update current user profile
+      operationId: updateCurrentUser
+      tags:
+        - Users
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMeRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+    delete:
+      summary: Delete current user account
+      operationId: deleteCurrentUser
+      tags:
+        - Users
+      security:
+        - BearerAuth: []
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteMeResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /disputes:
+    post:
+      summary: Create a new dispute
+      operationId: createDispute
+      tags:
+        - Disputes
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDisputeRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateDisputeResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+
+    get:
+      summary: List user's disputes
+      operationId: listDisputes
+      tags:
+        - Disputes
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: state
+          in: query
+          schema:
+            $ref: '#/components/schemas/DisputeState'
+        - name: role
+          in: query
+          schema:
+            $ref: '#/components/schemas/PartyRole'
+        - name: category
+          in: query
+          schema:
+            $ref: '#/components/schemas/DisputeCategory'
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: cursor
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DisputeListResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /disputes/{disputeId}:
+    get:
+      summary: Get dispute details
+      operationId: getDispute
+      tags:
+        - Disputes
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: disputeId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^disp_[a-z0-9]{6}$
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DisputeDetailResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    patch:
+      summary: Update dispute (draft state only)
+      operationId: updateDispute
+      tags:
+        - Disputes
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: disputeId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDisputeRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dispute'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+
+    post:
+      summary: Withdraw dispute
+      operationId: withdrawDispute
+      tags:
+        - Disputes
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: disputeId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WithdrawResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+
+  /disputes/{disputeId}/parties/{partyId}/brief/draft:
+    put:
+      summary: Save brief draft
+      operationId: saveBriefDraft
+      tags:
+        - Briefs
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: disputeId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: partyId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveDraftRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Brief'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+
+  /disputes/{disputeId}/parties/{partyId}/brief/submit:
+    post:
+      summary: Submit final brief
+      operationId: submitBrief
+      tags:
+        - Briefs
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: disputeId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: partyId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmitBriefResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+
+  /disputes/{disputeId}/parties/{partyId}/brief:
+    get:
+      summary: Get submitted brief
+      operationId: getBrief
+      tags:
+        - Briefs
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: disputeId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: partyId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Brief'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /disputes/{disputeId}/payment-intent:
+    get:
+      summary: Get Stripe payment intent
+      operationId: getPaymentIntent
+      tags:
+        - Payments
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: disputeId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentIntentResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /disputes/{disputeId}/payment/confirm:
+    post:
+      summary: Confirm payment
+      operationId: confirmPayment
+      tags:
+        - Payments
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: disputeId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfirmPaymentResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /disputes/{disputeId}/refund-request:
+    post:
+      summary: Request refund
+      operationId: requestRefund
+      tags:
+        - Payments
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: disputeId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Refund request submitted for review
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /users/me/payments:
+    get:
+      summary: Get payment history
+      operationId: getPaymentHistory
+      tags:
+        - Payments
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentHistoryResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /disputes/{disputeId}/opinion:
+    get:
+      summary: Get opinion for completed dispute
+      operationId: getOpinion
+      tags:
+        - Opinions
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: disputeId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Opinion'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /disputes/{disputeId}/opinion/pdf:
+    get:
+      summary: Download opinion as PDF
+      operationId: downloadOpinionPdf
+      tags:
+        - Opinions
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: disputeId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  signedUrl:
+                    type: string
+                    format: uri
+                  expiresAt:
+                    type: string
+                    format: date-time
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /disputes/{disputeId}/opinion/status:
+    get:
+      summary: Get opinion generation status
+      operationId: getOpinionStatus
+      tags:
+        - Opinions
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: disputeId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpinionStatus'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /disputes/{disputeId}/opinion/status/stream:
+    get:
+      summary: Server-Sent Events stream for opinion status
+      operationId: streamOpinionStatus
+      tags:
+        - Opinions
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: disputeId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Event stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /webhooks/stripe:
+    post:
+      summary: Stripe webhook endpoint
+      operationId: stripeWebhook
+      tags:
+        - Webhooks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  received:
+                    type: boolean
+                    example: true

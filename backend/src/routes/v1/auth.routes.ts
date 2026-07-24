@@ -1,130 +1,138 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { register, verifyEmail as verifyEmailService, login, refreshToken as refreshService, logout as logoutService, requestPasswordReset as requestReset, completePasswordReset as completeReset, getMe, updateMe, deleteAccount } from '../../services/auth/index.ts';
-import { validate } from '../middleware/validate.ts';
-import { requireAuth } from '../middleware/auth.ts';
-import { loginRateLimit } from '../middleware/rateLimit.ts';
+import { prisma } from '../../db/prisma';
+import { authMiddleware, AuthenticatedRequest } from '../../middleware/auth';
+import { validate } from '../../middleware/validate';
+import { registerRateLimiter, authRateLimiter } from '../../middleware/rateLimit';
+import { registerUser, verifyEmail, loginUser, refreshTokens, logoutUser, requestPasswordReset, completePasswordReset } from '../../services/auth';
+import { logger } from '../../utils/logger';
+import { UnauthorizedError, ForbiddenError, ConflictError, NotFoundError } from '../../utils/errors';
+import bcrypt from 'bcrypt';
 
 const router = Router();
 
 const registerSchema = z.object({
-  email: z.string().email().max(255),
-  password: z.string().min(8),
-  display_name: z.string().max(100).optional(),
-  accept_terms: z.literal(true),
-  marketing_opt_in: z.boolean().optional(),
-  preferred_llm_provider: z.string().optional(),
+  body: z.object({
+    email: z.string().email().max(255),
+    password: z.string().min(8).max(128).regex(/^(?=.*[A-Za-z])(?=.*\d)/),
+    displayName: z.string().max(100).optional(),
+    acceptTerms: z.boolean().refine(v => v === true, 'Terms must be accepted'),
+    marketingOptIn: z.boolean().optional(),
+  }),
 });
 
 const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string(),
+  body: z.object({
+    email: z.string().email().max(255),
+    password: z.string().min(1),
+  }),
 });
 
-router.post('/register', validate(registerSchema), async (req, res, next) => {
+const verifySchema = z.object({
+  body: z.object({
+    token: z.string().min(1),
+  }),
+});
+
+const refreshSchema = z.object({
+  body: z.object({
+    refreshToken: z.string().min(1),
+  }),
+});
+
+const passwordResetRequestSchema = z.object({
+  body: z.object({
+    email: z.string().email().max(255),
+  }),
+});
+
+const passwordResetCompleteSchema = z.object({
+  body: z.object({
+    token: z.string().min(1),
+    password: z.string().min(8).max(128).regex(/^(?=.*[A-Za-z])(?=.*\d)/),
+  }),
+});
+
+router.post('/register', registerRateLimiter, validate(registerSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const result = await register(req.body);
-    res.status(201).json(result);
-  } catch (e) {
-    next(e);
+    const result = await registerUser(req.body);
+    logger.info('User registered', { userId: result.user.id, email: result.user.email });
+    res.status(201).json({
+      user: result.user,
+      accessToken: result.tokens.accessToken,
+      refreshToken: result.tokens.refreshToken,
+      expiresIn: result.tokens.expiresIn,
+    });
+  } catch (error) {
+    next(error);
   }
 });
 
-router.post('/verify-email', async (req, res, next) => {
+router.post('/login', authRateLimiter, validate(loginSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { token } = req.body;
-    if (!token) throw Object.assign(new Error('Token required'), { status: 400, code: 'MISSING_TOKEN' });
-    const result = await verifyEmailService(token);
-    res.json(result);
-  } catch (e) {
-    next(e);
+    const result = await loginUser(req.body.email, req.body.password);
+    logger.info('User logged in', { userId: result.user.id, email: result.user.email });
+    res.json({
+      user: result.user,
+      accessToken: result.tokens.accessToken,
+      refreshToken: result.tokens.refreshToken,
+      expiresIn: result.tokens.expiresIn,
+    });
+  } catch (error) {
+    next(error);
   }
 });
 
-router.post('/login', loginRateLimit, validate(loginSchema), async (req, res, next) => {
+router.post('/verify-email', validate(verifySchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const result = await login(req.body);
-    res.json(result);
-  } catch (e) {
-    next(e);
+    await verifyEmail(req.body.token);
+    logger.info('Email verified via token');
+    res.json({ message: 'Email verified successfully' });
+  } catch (error) {
+    next(error);
   }
 });
 
-router.post('/refresh', async (req, res, next) => {
+router.post('/refresh', validate(refreshSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token) throw Object.assign(new Error('Token required'), { status: 400, code: 'MISSING_TOKEN' });
-    const result = await refreshService(token);
-    res.json(result);
-  } catch (e) {
-    next(e);
+    const tokens = await refreshTokens(req.body.refreshToken);
+    res.json({
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      expiresIn: tokens.expiresIn,
+    });
+  } catch (error) {
+    next(error);
   }
 });
 
-router.post('/logout', async (req, res, next) => {
+router.post('/logout', authMiddleware(), validate(refreshSchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token) throw Object.assign(new Error('Token required'), { status: 400, code: 'MISSING_TOKEN' });
-    await logoutService(token);
-    res.json({ success: true });
-  } catch (e) {
-    next(e);
+    await logoutUser(req.body.refreshToken);
+    logger.info('User logged out', { userId: req.user?.id });
+    res.json({ message: 'Logged out successfully' });
+  } catch (error) {
+    next(error);
   }
 });
 
-const passwordResetRequestSchema = z.object({ email: z.string().email() });
-router.post('/password-reset/request', validate(passwordResetRequestSchema), async (req, res, next) => {
+router.post('/password-reset/request', validate(passwordResetRequestSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
-    await requestReset(req.body.email);
-    res.json({ success: true });
-  } catch (e) {
-    next(e);
+    await requestPasswordReset(req.body.email);
+    res.json({ message: 'If the email exists, a reset link has been sent' });
+  } catch (error) {
+    next(error);
   }
 });
 
-const passwordResetSchema = z.object({
-  token: z.string(),
-  password: z.string().min(8),
-});
-router.post('/password-reset/complete', validate(passwordResetSchema), async (req, res, next) => {
+router.post('/password-reset/complete', validate(passwordResetCompleteSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const result = await completeReset(req.body.token, req.body.password);
-    res.json(result);
-  } catch (e) {
-    next(e);
+    await completePasswordReset(req.body.token, req.body.password);
+    logger.info('Password reset completed');
+    res.json({ message: 'Password reset successful' });
+  } catch (error) {
+    next(error);
   }
 });
 
-router.get('/users/me', requireAuth, async (req, res, next) => {
-  try {
-    const user = await getMe((req as any).user.sub);
-    res.json(user);
-  } catch (e) {
-    next(e);
-  }
-});
-
-const updateMeSchema = z.object({
-  display_name: z.string().max(100).optional(),
-  marketing_opt_in: z.boolean().optional(),
-  preferred_llm_provider: z.string().optional(),
-});
-router.patch('/users/me', requireAuth, validate(updateMeSchema), async (req, res, next) => {
-  try {
-    const user = await updateMe((req as any).user.sub, req.body);
-    res.json(user);
-  } catch (e) {
-    next(e);
-  }
-});
-
-router.delete('/users/me', requireAuth, async (req, res, next) => {
-  try {
-    await deleteAccount((req as any).user.sub);
-    res.status(202).json({ success: true });
-  } catch (e) {
-    next(e);
-  }
-});
-
-export default router;
+export { router as authRouter };

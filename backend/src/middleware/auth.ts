@@ -1,28 +1,102 @@
+import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import type { NextFunction, Request, Response } from 'express';
-import { env } from '../config/env.ts';
+import { prisma } from '../db/prisma';
+import { getEnv } from '../config/env';
+import { UnauthorizedError, ForbiddenError } from '../utils/errors';
 
-export function requireAuth(req: Request, res: Response, next: NextFunction) {
-  const token = req.headers.authorization?.replace('Bearer ', '');
-  if (!token) return res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Missing token' } });
-  try {
-    (req as any).user = jwt.verify(token, env.JWT_SECRET);
+const env = getEnv();
+
+export interface AuthenticatedRequest extends Request {
+  user?: {
+    id: string;
+    email: string;
+    role: string;
+    accountType: string;
+    emailVerified: boolean;
+  };
+  token?: string;
+}
+
+export interface TokenPayload {
+  userId: string;
+  email: string;
+  accountType: string;
+  type: 'access' | 'refresh';
+}
+
+export function authMiddleware(required: boolean = true) {
+  return async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      if (required) {
+        throw new UnauthorizedError('Missing or invalid authorization header');
+      }
+      return next();
+    }
+
+    const token = authHeader.substring(7);
+    
+    try {
+      const decoded = jwt.verify(token, env.JWT_SECRET) as TokenPayload;
+      
+      if (decoded.type !== 'access') {
+        throw new UnauthorizedError('Invalid token type');
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.userId },
+        select: { 
+          id: true, 
+          email: true, 
+          accountType: true, 
+          emailVerified: true, 
+          deletedAt: true 
+        },
+      });
+
+      if (!user || user.deletedAt) {
+        throw new UnauthorizedError('User not found');
+      }
+
+      req.user = {
+        id: user.id,
+        email: user.email,
+        role: user.accountType,
+        accountType: user.accountType,
+        emailVerified: user.emailVerified,
+      };
+      req.token = token;
+      
+      next();
+    } catch (error) {
+      if (error instanceof jwt.TokenExpiredError) {
+        throw new UnauthorizedError('Token expired');
+      }
+      if (error instanceof jwt.JsonWebTokenError) {
+        throw new UnauthorizedError('Invalid token');
+      }
+      throw error;
+    }
+  };
+}
+
+export function requireEmailVerified(req: AuthenticatedRequest, res: Response, next: NextFunction): void {
+  if (!req.user?.emailVerified) {
+    throw new ForbiddenError('Email verification required');
+  }
+  next();
+}
+
+export function requireRole(...accountTypes: string[]) {
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
+    if (!req.user || !accountTypes.includes(req.user.accountType)) {
+      throw new ForbiddenError('Insufficient permissions');
+    }
     next();
-  } catch {
-    return res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Invalid token' } });
-  }
+  };
 }
 
-export function requireAdmin(req: Request, res: Response, next: NextFunction) {
-  if (!(req as any).user?.admin) {
-    return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Admin access required' } });
-  }
-  next();
-}
-
-export function requireSupport(req: Request, res: Response, next: NextFunction) {
-  if (!(req as any).user?.support) {
-    return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Support access required' } });
-  }
-  next();
+export function optionalAuth(req: AuthenticatedRequest, res: Response, next: NextFunction): void {
+  authMiddleware(false)(req, res, next);
 }
