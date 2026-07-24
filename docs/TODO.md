@@ -103,99 +103,99 @@ Environment: local PostgreSQL only. No AWS/cloud services. frontend/ + backend/ 
 
 #### Backend Infrastructure Setup
 
-- [ ] T1.1.1.1: Initialize backend/package.json with Express, Prisma, Zod, bcrypt, jsonwebtoken, bullmq, stripe, redis, ioredis, cors, helmet, express-rate-limit, nodemailer, groq-sdk, @google/generative-ai, @sentry/node, zod
-- [ ] T1.1.1.2: Initialize backend/tsconfig.json with strict TypeScript settings and @/* path alias
-- [ ] T1.1.1.3: Create backend/src/index.ts Express entry point
-- [ ] T1.1.1.4: Create backend/src/config/env.ts for typed environment variables
-- [ ] T1.1.1.5: Create backend/src/config/redis.ts for Redis connection
-- [ ] T1.1.1.6: Create backend/src/db/database.ts for PostgreSQL connection
-- [ ] T1.1.1.7: Create backend/src/db/prisma.ts for Prisma client singleton
-- [ ] T1.1.1.8: Create backend/prisma/schema.prisma with User model and role enum
-- [ ] T1.1.1.9: Run prisma migrate dev --name init to create users table
-- [ ] T1.1.1.10: Create backend/prisma/seed.ts with admin user seed
-- [ ] T1.1.1.11: Run prisma db seed and verify admin user created
-- [ ] T1.1.1.12: Create backend/src/middleware/error.ts global error handler with envelope
-- [ ] T1.1.1.13: Create backend/src/middleware/validate.ts Zod validation wrapper
-- [ ] T1.1.1.14: Create backend/src/middleware/auth.ts JWT verification middleware
-- [ ] T1.1.1.15: Create backend/src/middleware/rateLimit.ts rate limiting middleware with Redis store
-- [ ] T1.1.1.16: Create backend/src/middleware/cors.ts CORS allowlist
-- [ ] T1.1.1.17: Create backend/src/middleware/helmet.ts security headers
-- [ ] T1.1.1.18: Create backend/src/middleware/requestId.ts request ID generation
-- [ ] T1.1.1.19: Create backend/src/utils/errors.ts typed error classes
-- [ ] T1.1.1.20: Create backend/src/utils/logger.ts structured logger
+- [x] T1.1.1.1: Initialize backend/package.json with Express, Prisma, Zod, bcrypt, jsonwebtoken, bullmq, stripe, redis, ioredis, cors, helmet, express-rate-limit, nodemailer, groq-sdk, @google/generative-ai, @sentry/node, zod
+- [x] T1.1.1.2: Initialize backend/tsconfig.json with strict TypeScript settings and @/* path alias
+- [x] T1.1.1.3: Create backend/src/index.ts Express entry point
+- [x] T1.1.1.4: Create backend/src/config/env.ts for typed environment variables
+- [x] T1.1.1.5: Create backend/src/config/redis.ts for Redis connection
+- [x] T1.1.1.6: Create backend/src/db/database.ts for PostgreSQL connection
+- [x] T1.1.1.7: Create backend/src/db/prisma.ts for Prisma client singleton
+- [x] T1.1.1.8: Create backend/prisma/schema.prisma with User model and role enum
+- [x] T1.1.1.9: Run prisma migrate dev --name init to create users table
+- [x] T1.1.1.10: Create backend/prisma/seed.ts with admin user seed
+- [x] T1.1.1.11: Run prisma db seed and verify admin user created
+- [x] T1.1.1.12: Create backend/src/middleware/error.ts global error handler with envelope
+- [x] T1.1.1.13: Create backend/src/middleware/validate.ts Zod validation wrapper
+- [x] T1.1.1.14: Create backend/src/middleware/auth.ts JWT verification middleware
+- [x] T1.1.1.15: Create backend/src/middleware/rateLimit.ts rate limiting middleware with Redis store
+- [x] T1.1.1.16: Create backend/src/middleware/cors.ts CORS allowlist
+- [x] T1.1.1.17: Create backend/src/middleware/helmet.ts security headers
+- [x] T1.1.1.18: Create backend/src/middleware/requestId.ts request ID generation
+- [x] T1.1.1.19: Create backend/src/utils/errors.ts typed error classes
+- [x] T1.1.1.20: Create backend/src/utils/logger.ts structured logger
 
 #### Auth Service Implementation
 
-- [ ] T1.1.2.0: Create backend/src/services/auth/index.ts
-- [ ] T1.1.2.1: Implement register: uniqueness check, bcrypt hash cost 12, verification token, Redis SETEX 24h
-- [ ] T1.1.2.2: Implement verifyEmail: lookup Redis token, update user verified true, delete token
-- [ ] T1.1.2.3: Implement login: bcrypt compare, JWT access 15m, refresh 7d, Redis refresh storage, update lastLoginAt
-- [ ] T1.1.2.4: Implement refreshToken: verify type, rotate refresh token, update Redis, return new pair
-- [ ] T1.1.2.5: Implement logout: delete refresh key from Redis, return success
-- [ ] T1.1.2.6: Implement requestPasswordReset: generate token, store in Redis 1h, return success (do not reveal user existence)
-- [ ] T1.1.2.7: Implement completePasswordReset: verify token, hash new password, clear tokens
-- [ ] T1.1.2.8: Implement getMe: select safe fields, exclude passwordHash
-- [ ] T1.1.2.9: Implement updateMe: update displayName, marketingOptIn, preferredLlmProvider
-- [ ] T1.1.2.10: Implement deleteAccount: check active disputes, soft delete, set deletedAt timestamp
+- [x] T1.1.2.0: Create backend/src/services/auth/index.ts
+- [x] T1.1.2.1: Implement register: uniqueness check, bcrypt hash cost 12, verification token, Redis SETEX 24h
+- [x] T1.1.2.2: Implement verifyEmail: lookup Redis token, update user verified true, delete token
+- [x] T1.1.2.3: Implement login: bcrypt compare, JWT access 15m, refresh 7d, Redis refresh storage, update lastLoginAt
+- [x] T1.1.2.4: Implement refreshToken: verify type, rotate refresh token, update Redis, return new pair
+- [x] T1.1.2.5: Implement logout: delete refresh key from Redis, return success
+- [x] T1.1.2.6: Implement requestPasswordReset: generate token, store in Redis 1h, return success (do not reveal user existence)
+- [x] T1.1.2.7: Implement completePasswordReset: verify token, hash new password, clear tokens
+- [x] T1.1.2.8: Implement getMe: select safe fields, exclude passwordHash
+- [x] T1.1.2.9: Implement updateMe: update displayName, marketingOptIn, preferredLlmProvider
+- [x] T1.1.2.10: Implement deleteAccount: check active disputes, soft delete, set deletedAt timestamp
 
 #### Auth Routes Implementation
 
-- [ ] T1.1.3.1: Create backend/src/routes/v1/auth.routes.ts
-- [ ] T1.1.3.2: Implement POST /v1/auth/register with validation and rate limit 3/min/IP
-- [ ] T1.1.3.3: Implement POST /v1/auth/verify-email
-- [ ] T1.1.3.4: Implement POST /v1/auth/login with rate limit 5/min/email
-- [ ] T1.1.3.5: Implement POST /v1/auth/refresh
-- [ ] T1.1.3.6: Implement POST /v1/auth/logout
-- [ ] T1.1.3.7: Implement POST /v1/auth/password-reset/request
-- [ ] T1.1.3.8: Implement POST /v1/auth/password-reset/complete
+- [x] T1.1.3.1: Create backend/src/routes/v1/auth.routes.ts
+- [x] T1.1.3.2: Implement POST /v1/auth/register with validation and rate limit 3/min/IP
+- [x] T1.1.3.3: Implement POST /v1/auth/verify-email
+- [x] T1.1.3.4: Implement POST /v1/auth/login with rate limit 5/min/email
+- [x] T1.1.3.5: Implement POST /v1/auth/refresh
+- [x] T1.1.3.6: Implement POST /v1/auth/logout
+- [x] T1.1.3.7: Implement POST /v1/auth/password-reset/request
+- [x] T1.1.3.8: Implement POST /v1/auth/password-reset/complete
 
 #### User Routes Implementation
 
-- [ ] T1.1.4.1: Create backend/src/routes/v1/user.routes.ts
-- [ ] T1.1.4.2: Implement GET /v1/users/me with auth middleware
-- [ ] T1.1.4.3: Implement PATCH /v1/users/me with auth middleware
-- [ ] T1.1.4.4: Implement DELETE /v1/users/me with active-dispute guard
+- [x] T1.1.4.1: Create backend/src/routes/v1/user.routes.ts
+- [x] T1.1.4.2: Implement GET /v1/users/me with auth middleware
+- [x] T1.1.4.3: Implement PATCH /v1/users/me with auth middleware
+- [x] T1.1.4.4: Implement DELETE /v1/users/me with active-dispute guard
 
 #### Error Envelope, Rate Limiting, OpenAPI
 
-- [ ] T1.1.5.1: Implement standard error envelope { error: { code, message, details, requestId, documentationUrl } }
-- [ ] T1.1.5.2: Add requestId generation middleware to every request
-- [ ] T1.1.5.3: Map all error classes to error codes
-- [ ] T1.1.5.4: Create backend/docs/openapi.yaml
-- [ ] T1.1.5.5: Define all auth and user endpoints with request/response schemas
-- [ ] T1.1.5.6: Define BearerAuth security scheme in OpenAPI
-- [ ] T1.1.5.7: Add rate limit headers to all responses: X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset
-- [ ] T1.1.5.8: Validate OpenAPI spec with swagger-cli or openapi-generator
-- [ ] T1.1.5.9: Generate TypeScript types from OpenAPI for frontend consumption
-- [ ] T1.1.5.10: Create frontend/src/lib/api-client.ts from generated types
+- [x] T1.1.5.1: Implement standard error envelope { error: { code, message, details, requestId, documentationUrl } }
+- [x] T1.1.5.2: Add requestId generation middleware to every request
+- [x] T1.1.5.3: Map all error classes to error codes
+- [x] T1.1.5.4: Create backend/docs/openapi.yaml
+- [x] T1.1.5.5: Define all auth and user endpoints with request/response schemas
+- [x] T1.1.5.6: Define BearerAuth security scheme in OpenAPI
+- [x] T1.1.5.7: Add rate limit headers to all responses: X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset
+- [x] T1.1.5.8: Validate OpenAPI spec with swagger-cli or openapi-generator
+- [x] T1.1.5.9: Generate TypeScript types from OpenAPI for frontend consumption
+- [x] T1.1.5.10: Create frontend/src/lib/api-client.ts from generated types
 
 #### Frontend Infrastructure Setup
 
-- [ ] T1.1.6.1: Initialize frontend/package.json with Next.js, React, Tailwind, zustand, tanstack/react-query
-- [ ] T1.1.6.2: Initialize frontend/tsconfig.json with Next.js plugin and @/* path alias
-- [ ] T1.1.6.3: Create frontend/next.config.mjs with reactStrictMode true
-- [ ] T1.1.6.4: Create frontend/tailwind.config.ts and postcss.config.cjs
-- [ ] T1.1.6.5: Create frontend/src/app/globals.css with Tailwind directives
-- [ ] T1.1.6.6: Create frontend/src/app/layout.tsx root layout
-- [ ] T1.1.6.7: Create frontend/src/app/loading.tsx loading state
-- [ ] T1.1.6.8: Create frontend/src/app/error.tsx error boundary
-- [ ] T1.1.6.9: Create frontend/src/app/not-found.tsx 404 page
-- [ ] T1.1.6.10: Set up frontend/.env.example with NEXT_PUBLIC_API_URL and NEXT_PUBLIC_APP_URL
-- [ ] T1.1.6.11: Install frontend dependencies and verify pnpm build succeeds
-- [ ] T1.1.6.12: Create frontend/src/stores/useAuthStore.ts with zustand
-- [ ] T1.1.6.13: Implement auth store state and actions: login, register, logout, refresh
-- [ ] T1.1.6.14: Create frontend/src/hooks/useAuth.ts custom hook
-- [ ] T1.1.6.15: Create frontend/src/lib/api-client.ts fetch wrapper
-- [ ] T1.1.6.16: Add JWT token interceptor and automatic refresh logic to api-client
-- [ ] T1.1.6.17: Create frontend/src/app/(marketing)/page.tsx landing page
-- [ ] T1.1.6.18: Create frontend/src/app/(auth)/register/page.tsx registration page with form
-- [ ] T1.1.6.19: Create frontend/src/app/(auth)/verify-email/page.tsx email verification page
-- [ ] T1.1.6.20: Create frontend/src/app/(auth)/login/page.tsx login page with form
-- [ ] T1.1.6.21: Create frontend/src/app/(dashboard)/layout.tsx dashboard layout
-- [ ] T1.1.6.22: Implement protected route wrapper for authenticated pages
-- [ ] T1.1.6.23: Add logout button to dashboard layout with store clearing
-- [ ] T1.1.6.24: Create frontend/public/assets (favicon.ico and logo.svg placeholders)
-- [ ] T1.1.6.25: Verify frontend lint passes with zero warnings
+- [x] T1.1.6.1: Initialize frontend/package.json with Next.js, React, Tailwind, zustand, tanstack/react-query
+- [x] T1.1.6.2: Initialize frontend/tsconfig.json with Next.js plugin and @/* path alias
+- [x] T1.1.6.3: Create frontend/next.config.mjs with reactStrictMode true
+- [x] T1.1.6.4: Create frontend/tailwind.config.ts and postcss.config.cjs
+- [x] T1.1.6.5: Create frontend/src/app/globals.css with Tailwind directives
+- [x] T1.1.6.6: Create frontend/src/app/layout.tsx root layout
+- [x] T1.1.6.7: Create frontend/src/app/loading.tsx loading state
+- [x] T1.1.6.8: Create frontend/src/app/error.tsx error boundary
+- [x] T1.1.6.9: Create frontend/src/app/not-found.tsx 404 page
+- [x] T1.1.6.10: Set up frontend/.env.example with NEXT_PUBLIC_API_URL and NEXT_PUBLIC_APP_URL
+- [x] T1.1.6.11: Install frontend dependencies and verify pnpm build succeeds
+- [x] T1.1.6.12: Create frontend/src/stores/useAuthStore.ts with zustand
+- [x] T1.1.6.13: Implement auth store state and actions: login, register, logout, refresh
+- [x] T1.1.6.14: Create frontend/src/hooks/useAuth.ts custom hook
+- [x] T1.1.6.15: Create frontend/src/lib/api-client.ts fetch wrapper
+- [x] T1.1.6.16: Add JWT token interceptor and automatic refresh logic to api-client
+- [x] T1.1.6.17: Create frontend/src/app/(marketing)/page.tsx landing page
+- [x] T1.1.6.18: Create frontend/src/app/(auth)/register/page.tsx registration page with form
+- [x] T1.1.6.19: Create frontend/src/app/(auth)/verify-email/page.tsx email verification page
+- [x] T1.1.6.20: Create frontend/src/app/(auth)/login/page.tsx login page with form
+- [x] T1.1.6.21: Create frontend/src/app/(dashboard)/layout.tsx dashboard layout
+- [x] T1.1.6.22: Implement protected route wrapper for authenticated pages
+- [x] T1.1.6.23: Add logout button to dashboard layout with store clearing
+- [x] T1.1.6.24: Create frontend/public/assets (favicon.ico and logo.svg placeholders)
+- [x] T1.1.6.25: Verify frontend lint passes with zero warnings
 
 ### F1 Stage 1.2: Comprehensive Testing
 
@@ -402,72 +402,72 @@ Environment: local PostgreSQL only. No AWS/cloud services. frontend/ + backend/ 
 
 #### Database Schema
 
-- [ ] T2.1.1.1: Create disputes table migration in backend/prisma/migrations/
-- [ ] T2.1.1.2: Add disputes columns: id, category, title, summary, estimated_stakes_usd, state, pricing_tier, price_usd, initiator_user_id, created_at, updated_at, completed_at, deleted_at
-- [ ] T2.1.1.3: Create parties table migration in backend/prisma/migrations/
-- [ ] T2.1.1.4: Add parties columns: id, dispute_id, role, user_id, brief_status, created_at, updated_at
-- [ ] T2.1.1.5: Add UNIQUE constraint on parties(dispute_id, role)
-- [ ] T2.1.1.6: Add index on disputes(initiator_user_id)
-- [ ] T2.1.1.7: Add partial index on disputes(state) excluding completed, withdrawn, failed
-- [ ] T2.1.1.8: Add index on parties(dispute_id)
-- [ ] T2.1.1.9: Add partial index on parties(user_id) where user_id IS NOT NULL
-- [ ] T2.1.1.10: Run prisma migrate dev --name add-disputes-and-parties
-- [ ] T2.1.1.11: Run prisma db seed and verify migration
-- [ ] T2.1.1.12: Update backend/src/types/schemas.ts with DisputeCreateInput Zod schema
-- [ ] T2.1.1.13: Update backend/src/types/schemas.ts with DisputeUpdateInput Zod schema
-- [ ] T2.1.1.14: Update OpenAPI spec with DisputeCreateRequest and DisputeResponse
-- [ ] T2.1.1.15: Generate frontend types from updated OpenAPI spec
+- [x] T2.1.1.1: Create disputes table migration in backend/prisma/migrations/
+- [x] T2.1.1.2: Add disputes columns: id, category, title, summary, estimated_stakes_usd, state, pricing_tier, price_usd, initiator_user_id, created_at, updated_at, completed_at, deleted_at
+- [x] T2.1.1.3: Create parties table migration in backend/prisma/migrations/
+- [x] T2.1.1.4: Add parties columns: id, dispute_id, role, user_id, brief_status, created_at, updated_at
+- [x] T2.1.1.5: Add UNIQUE constraint on parties(dispute_id, role)
+- [x] T2.1.1.6: Add index on disputes(initiator_user_id)
+- [x] T2.1.1.7: Add partial index on disputes(state) excluding completed, withdrawn, failed
+- [x] T2.1.1.8: Add index on parties(dispute_id)
+- [x] T2.1.1.9: Add partial index on parties(user_id) where user_id IS NOT NULL
+- [x] T2.1.1.10: Run prisma migrate dev --name add-disputes-and-parties
+- [x] T2.1.1.11: Run prisma db seed and verify migration
+- [x] T2.1.1.12: Update backend/src/types/schemas.ts with DisputeCreateInput Zod schema
+- [x] T2.1.1.13: Update backend/src/types/schemas.ts with DisputeUpdateInput Zod schema
+- [x] T2.1.1.14: Update OpenAPI spec with DisputeCreateRequest and DisputeResponse
+- [x] T2.1.1.15: Generate frontend types from updated OpenAPI spec
 
 #### Backend Dispute Service
 
-- [ ] T2.1.2.1: Create backend/src/services/disputes/index.ts
-- [ ] T2.1.2.2: Implement createDispute validate category contract_interpretation
-- [ ] T2.1.2.3: Implement createDispute validate title length 5-200 chars
-- [ ] T2.1.2.4: Implement createDispute validate summary max 500 chars
-- [ ] T2.1.2.5: Implement createDispute validate estimated_stakes_usd positive if provided
-- [ ] T2.1.2.6: Implement createDispute set default price_usd 49.00
-- [ ] T2.1.2.7: Implement createDispute set initial state draft
-- [ ] T2.1.2.8: Implement createDispute create party record role initiator brief_status not_started
-- [ ] T2.1.2.9: Implement getDisputes return only initiator user_id disputes exclude deleted
-- [ ] T2.1.2.10: Implement getDispute with parties, briefs, opinion, evaluator_outputs, payments includes
-- [ ] T2.1.2.11: Implement updateDispute enforce draft state only
-- [ ] T2.1.2.12: Implement withdrawDispute validate allowedStates: draft, brief_submitted, payment_pending
-- [ ] T2.1.2.13: Implement withdrawDispute refund logic if successful payment exists
-- [ ] T2.1.2.14: Implement withdrawDispute inside database transaction
-- [ ] T2.1.2.15: Create dispute state machine enforcement function
-- [ ] T2.1.2.16: Create state transition validation function reject invalid transitions 409
+- [x] T2.1.2.1: Create backend/src/services/disputes/index.ts
+- [x] T2.1.2.2: Implement createDispute validate category contract_interpretation
+- [x] T2.1.2.3: Implement createDispute validate title length 5-200 chars
+- [x] T2.1.2.4: Implement createDispute validate summary max 500 chars
+- [x] T2.1.2.5: Implement createDispute validate estimated_stakes_usd positive if provided
+- [x] T2.1.2.6: Implement createDispute set default price_usd 49.00
+- [x] T2.1.2.7: Implement createDispute set initial state draft
+- [x] T2.1.2.8: Implement createDispute create party record role initiator brief_status not_started
+- [x] T2.1.2.9: Implement getDisputes return only initiator user_id disputes exclude deleted
+- [x] T2.1.2.10: Implement getDispute with parties, briefs, opinion, evaluator_outputs, payments includes
+- [x] T2.1.2.11: Implement updateDispute enforce draft state only
+- [x] T2.1.2.12: Implement withdrawDispute validate allowedStates: draft, brief_submitted, payment_pending
+- [x] T2.1.2.13: Implement withdrawDispute refund logic if successful payment exists
+- [x] T2.1.2.14: Implement withdrawDispute inside database transaction
+- [x] T2.1.2.15: Create dispute state machine enforcement function
+- [x] T2.1.2.16: Create state transition validation function reject invalid transitions 409
 
 #### Backend Dispute Routes
 
-- [ ] T2.1.3.1: Create backend/src/routes/v1/disputes.routes.ts
-- [ ] T2.1.3.2: Implement POST /v1/disputes with auth, email_verified, Zod validation, rate limit 100/hour
-- [ ] T2.1.3.3: Implement GET /v1/disputes list endpoint
-- [ ] T2.1.3.4: Implement GET /v1/disputes/:dispute_id detail endpoint
-- [ ] T2.1.3.5: Implement PATCH /v1/disputes/:dispute_id draft-only update
-- [ ] T2.1.3.6: Implement POST /v1/disputes/:dispute_id/withdraw endpoint
-- [ ] T2.1.3.7: Wire dispute routes into main Express app
-- [ ] T2.1.3.8: Add dispute endpoints to OpenAPI spec
+- [x] T2.1.3.1: Create backend/src/routes/v1/disputes.routes.ts
+- [x] T2.1.3.2: Implement POST /v1/disputes with auth, email_verified, Zod validation, rate limit 100/hour
+- [x] T2.1.3.3: Implement GET /v1/disputes list endpoint
+- [x] T2.1.3.4: Implement GET /v1/disputes/:dispute_id detail endpoint
+- [x] T2.1.3.5: Implement PATCH /v1/disputes/:dispute_id draft-only update
+- [x] T2.1.3.6: Implement POST /v1/disputes/:dispute_id/withdraw endpoint
+- [x] T2.1.3.7: Wire dispute routes into main Express app
+- [x] T2.1.3.8: Add dispute endpoints to OpenAPI spec
 
 #### Frontend Dispute Implementation
 
-- [ ] T2.1.4.1: Create frontend/src/app/(dashboard)/disputes/page.tsx
-- [ ] T2.1.4.2: Create frontend/src/app/(dashboard)/disputes/[id]/page.tsx
-- [ ] T2.1.4.3: Create frontend/src/app/(dashboard)/disputes/new/page.tsx
-- [ ] T2.1.4.4: Implement dispute creation form component
-- [ ] T2.1.4.5: Add category dropdown (contract_interpretation only)
-- [ ] T2.1.4.6: Add title input with 5-200 char validation and character counter
-- [ ] T2.1.4.7: Add summary textarea with 500 char max and counter
-- [ ] T2.1.4.8: Add estimated_stakes_usd input with positive number validation
-- [ ] T2.1.4.9: Add form submission loading state and error display
-- [ ] T2.1.4.10: Add success redirect to newly created dispute detail page
-- [ ] T2.1.4.11: Implement dispute list with TanStack Query useQuery
-- [ ] T2.1.4.12: Add loading skeleton and error state for dispute list
-- [ ] T2.1.4.13: Implement dispute detail display with state badge
-- [ ] T2.1.4.14: Add color-coded state badge component
-- [ ] T2.1.4.15: Add withdraw button visible only for draft disputes
-- [ ] T2.1.4.16: Implement withdraw confirmation dialog
-- [ ] T2.1.4.17: Add dispute list link to dashboard navigation
-- [ ] T2.1.4.18: Add empty state for users with no disputes
+- [x] T2.1.4.1: Create frontend/src/app/(dashboard)/disputes/page.tsx
+- [x] T2.1.4.2: Create frontend/src/app/(dashboard)/disputes/[id]/page.tsx
+- [x] T2.1.4.3: Create frontend/src/app/(dashboard)/disputes/new/page.tsx
+- [x] T2.1.4.4: Implement dispute creation form component
+- [x] T2.1.4.5: Add category dropdown (contract_interpretation only)
+- [x] T2.1.4.6: Add title input with 5-200 char validation and character counter
+- [x] T2.1.4.7: Add summary textarea with 500 char max and counter
+- [x] T2.1.4.8: Add estimated_stakes_usd input with positive number validation
+- [x] T2.1.4.9: Add form submission loading state and error display
+- [x] T2.1.4.10: Add success redirect to newly created dispute detail page
+- [x] T2.1.4.11: Implement dispute list with TanStack Query useQuery
+- [x] T2.1.4.12: Add loading skeleton and error state for dispute list
+- [x] T2.1.4.13: Implement dispute detail display with state badge
+- [x] T2.1.4.14: Add color-coded state badge component
+- [x] T2.1.4.15: Add withdraw button visible only for draft disputes
+- [x] T2.1.4.16: Implement withdraw confirmation dialog
+- [x] T2.1.4.17: Add dispute list link to dashboard navigation
+- [x] T2.1.4.18: Add empty state for users with no disputes
 
 ### F2 Stage 2.2: Comprehensive Testing
 
@@ -664,37 +664,37 @@ Environment: local PostgreSQL only. No AWS/cloud services. frontend/ + backend/ 
 - [ ] T3_Brief.009: Generate frontend types from OpenAPI
 
 #### Backend Encryption Utilities
-- [ ] T3_Brief.010: Create backend/src/utils/crypto.ts AES-256-GCM encrypt/decrypt helpers
-- [ ] T3_Brief.011: Implement encrypt(content, keyId) returning encryptedContent and contentEncryptionKeyId
-- [ ] T3_Brief.012: Implement decrypt(encryptedContent, keyId) returning plaintext
-- [ ] T3_Brief.013: Implement generateContentEncryptionKey() creating 32-byte key
-- [ ] T3_Brief.014: Implement rotateEncryptionKey() for quarterly rotation
-- [ ] T3_Brief.015: Add encryption key storage in backend/config/encryption.ts
-- [ ] T3_Brief.016: Ensure encryption keys never logged or exposed in error messages
-- [ ] T3_Brief.017: Add key rotation audit logging
+- [x] T3_Brief.010: Create backend/src/utils/crypto.ts AES-256-GCM encrypt/decrypt helpers
+- [x] T3_Brief.011: Implement encrypt(content, keyId) returning encryptedContent and contentEncryptionKeyId
+- [x] T3_Brief.012: Implement decrypt(encryptedContent, keyId) returning plaintext
+- [x] T3_Brief.013: Implement generateContentEncryptionKey() creating 32-byte key
+- [x] T3_Brief.014: Implement rotateEncryptionKey() for quarterly rotation
+- [x] T3_Brief.015: Add encryption key storage in backend/config/encryption.ts
+- [x] T3_Brief.016: Ensure encryption keys never logged or exposed in error messages
+- [x] T3_Brief.017: Add key rotation audit logging
 
 #### Backend Brief Service
-- [ ] T3_Brief.018: Create backend/src/services/briefs/index.ts
-- [ ] T3_Brief.019: Implement saveDraft() allowing partial section data
-- [ ] T3_Brief.020: Validate party exists in dispute and user is party member in saveDraft
-- [ ] T3_Brief.021: Validate dispute state allows brief editing (draft or brief_submitted only)
-- [ ] T3_Brief.022: Encrypt brief content with AES-256-GCM before storing in saveDraft
-- [ ] T3_Brief.023: Calculate and store word_count from non-empty sections
-- [ ] T3_Brief.024: Update existing draft or create new if none exists (upsert)
-- [ ] T3_Brief.025: Implement submitBrief() with full validation
-- [ ] T3_Brief.026: Validate all 5 sections present and non-empty on submit
-- [ ] T3_Brief.027: Enforce word count: 500-2000 suggested, hard cap 5000 on submit
-- [ ] T3_Brief.028: Run content moderation check before final submission
-- [ ] T3_Brief.029: Reject disallowed content with 400: illegal activity, harassment, threats, sexual content, PII of others
-- [ ] T3_Brief.030: Set status to submitted and record submitted_at timestamp
-- [ ] T3_Brief.031: Generate seal_hash SHA-256 of encrypted_content for immutability proof
-- [ ] T3_Brief.032: Set status to sealed after submission — no further edits allowed
-- [ ] T3_Brief.033: Implement getBrief() with ownership check and on-the-fly decryption
-- [ ] T3_Brief.034: Return 404 if brief not found or user not party member
-- [ ] T3_Brief.035: Return 403 if brief is sealed and user attempts edit
-- [ ] T3_Brief.036: Implement content moderation helper using LLM provider or third-party service
-- [ ] T3_Brief.037: Log all moderation checks in audit_events table
-- [ ] T3_Brief.038: Implement brief status state machine: not_started -> in_progress -> submitted -> sealed
+- [x] T3_Brief.018: Create backend/src/services/briefs/index.ts
+- [x] T3_Brief.019: Implement saveDraft() allowing partial section data
+- [x] T3_Brief.020: Validate party exists in dispute and user is party member in saveDraft
+- [x] T3_Brief.021: Validate dispute state allows brief editing (draft or brief_submitted only)
+- [x] T3_Brief.022: Encrypt brief content with AES-256-GCM before storing in saveDraft
+- [x] T3_Brief.023: Calculate and store word_count from non-empty sections
+- [x] T3_Brief.024: Update existing draft or create new if none exists (upsert)
+- [x] T3_Brief.025: Implement submitBrief() with full validation
+- [x] T3_Brief.026: Validate all 5 sections present and non-empty on submit
+- [x] T3_Brief.027: Enforce word count: 500-2000 suggested, hard cap 5000 on submit
+- [x] T3_Brief.028: Run content moderation check before final submission
+- [x] T3_Brief.029: Reject disallowed content with 400: illegal activity, harassment, threats, sexual content, PII of others
+- [x] T3_Brief.030: Set status to submitted and record submitted_at timestamp
+- [x] T3_Brief.031: Generate seal_hash SHA-256 of encrypted_content for immutability proof
+- [x] T3_Brief.032: Set status to sealed after submission — no further edits allowed
+- [x] T3_Brief.033: Implement getBrief() with ownership check and on-the-fly decryption
+- [x] T3_Brief.034: Return 404 if brief not found or user not party member
+- [x] T3_Brief.035: Return 403 if brief is sealed and user attempts edit
+- [x] T3_Brief.036: Implement content moderation helper using LLM provider or third-party service
+- [x] T3_Brief.037: Log all moderation checks in audit_events table
+- [x] T3_Brief.038: Implement brief status state machine: not_started -> in_progress -> submitted -> sealed
 
 #### Backend Brief Routes
 - [ ] T3_Brief.039: Create backend/src/routes/v1/briefs.routes.ts
@@ -1016,21 +1016,21 @@ Environment: local PostgreSQL only. No AWS/cloud services. frontend/ + backend/ 
 
 ### F5 Stage 4.1: Feature Implementation
 
-- [ ] T4.1.1.1: Create backend/src/providers/llm.ts LLMProvider interface and ProviderCapabilities type
-- [ ] T4.1.1.2: Create backend/src/providers/types.ts Prompt CompletionResult HealthStatus CostEstimate
-- [ ] T4.1.1.3: Create backend/src/providers/errors.ts provider error classes
-- [ ] T4.1.1.4: Create backend/src/providers/retry.ts withRetry exponential backoff utility
-- [ ] T4.1.1.5: Create backend/src/providers/circuit-breaker.ts CircuitBreaker class
-- [ ] T4.1.1.6: Create backend/src/providers/cost.ts cost estimation utilities
-- [ ] T4.1.1.7: Create backend/src/providers/health.ts health check utilities
-- [ ] T4.1.1.8: Create backend/src/providers/registry.ts ProviderRegistry class
-- [ ] T4.1.1.9: Create backend/src/providers/index.ts barrel export
-- [ ] T4.1.1.10: Create backend/src/providers/groq.provider.ts GroqProvider for Llama 3 70B
-- [ ] T4.1.1.11: Create backend/src/providers/groq.provider.ts MixtralProvider for Mixtral 8x7B
-- [ ] T4.1.1.12: Create backend/src/providers/gemini.provider.ts GeminiProvider for Gemini 1.5 Pro
-- [ ] T4.1.1.13: Configure providers from env GROQ_API_KEY and GEMINI_API_KEY
-- [ ] T4.1.1.14: Create backend/src/prompts/eval-v3.2.ts with immutable EVAL_PROMPT_V3_2 string
-- [ ] T4.1.1.15: Create backend/src/prompts/agg-v2.1.ts with immutable AGG_PROMPT_V2_1 string
+- [x] T4.1.1.1: Create backend/src/providers/llm.ts LLMProvider interface and ProviderCapabilities type
+- [x] T4.1.1.2: Create backend/src/providers/types.ts Prompt CompletionResult HealthStatus CostEstimate
+- [x] T4.1.1.3: Create backend/src/providers/errors.ts provider error classes
+- [x] T4.1.1.4: Create backend/src/providers/retry.ts withRetry exponential backoff utility
+- [x] T4.1.1.5: Create backend/src/providers/circuit-breaker.ts CircuitBreaker class
+- [x] T4.1.1.6: Create backend/src/providers/cost.ts cost estimation utilities
+- [x] T4.1.1.7: Create backend/src/providers/health.ts health check utilities
+- [x] T4.1.1.8: Create backend/src/providers/registry.ts ProviderRegistry class
+- [x] T4.1.1.9: Create backend/src/providers/index.ts barrel export
+- [x] T4.1.1.10: Create backend/src/providers/groq.provider.ts GroqProvider for Llama 3 70B
+- [x] T4.1.1.11: Create backend/src/providers/groq.provider.ts MixtralProvider for Mixtral 8x7B
+- [x] T4.1.1.12: Create backend/src/providers/gemini.provider.ts GeminiProvider for Gemini 1.5 Pro
+- [x] T4.1.1.13: Configure providers from env GROQ_API_KEY and GEMINI_API_KEY
+- [x] T4.1.1.14: Create backend/src/prompts/eval-v3.2.ts with immutable EVAL_PROMPT_V3_2 string
+- [x] T4.1.1.15: Create backend/src/prompts/agg-v2.1.ts with immutable AGG_PROMPT_V2_1 string
 - [ ] T4.1.1.16: Create evaluator_outputs table migration in backend/prisma/migrations/
 - [ ] T4.1.1.17: Add evaluator_outputs columns with all required fields
 - [ ] T4.1.1.18: Add index on evaluator_outputs(dispute_id)

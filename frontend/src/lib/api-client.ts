@@ -57,17 +57,17 @@ class ApiClient {
           throw new Error('Token refresh failed');
         }
 
-        const data = await response.json();
-        this.accessToken = data.access_token;
-        this.refreshToken = data.refresh_token;
+  const data = await response.json();
+  this.accessToken = data.accessToken;
+  this.refreshToken = data.refreshToken;
 
         if (typeof window !== 'undefined') {
           const stored = localStorage.getItem('auth-storage');
-          if (stored) {
-            const { state } = JSON.parse(stored);
-            state.accessToken = data.access_token;
-            state.refreshToken = data.refresh_token;
-            localStorage.setItem('auth-storage', JSON.stringify({ state }));
+  if (stored) {
+      const { state } = JSON.parse(stored);
+      state.accessToken = data.accessToken;
+      state.refreshToken = data.refreshToken;
+      localStorage.setItem('auth-storage', JSON.stringify({ state }));
           }
         }
       } finally {

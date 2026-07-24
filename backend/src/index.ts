@@ -12,11 +12,16 @@ import { authMiddleware, AuthenticatedRequest } from './middleware/auth';
 
 const env = getEnv();
 
-const app = express();
+const app: express.Express = express();
 
 app.use(helmetMiddleware);
 app.use(corsMiddleware);
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({
+  limit: '1mb',
+  verify: (req: any, res: Response, buf: Buffer) => {
+    req.rawBody = buf.toString('utf8');
+  },
+}));
 app.use(requestIdMiddleware);
 app.use(generalRateLimiter);
 
@@ -30,9 +35,21 @@ app.get('/v1/version', (req: Request, res: Response) => {
 
 import { authRouter } from './routes/v1/auth.routes';
 import { userRouter } from './routes/v1/user.routes';
+import { disputesRouter } from './routes/v1/disputes.routes';
+import { briefsRouter } from './routes/v1/briefs.routes';
+import { evaluationRouter } from './routes/v1/evaluation.routes';
+import { paymentsRouter } from './routes/v1/payments.routes';
+import { opinionsRouter } from './routes/v1/opinions.routes';
+import { adminRouter } from './routes/v1/admin.routes';
 
 app.use('/v1/auth', authRouter);
 app.use('/v1/users', userRouter);
+app.use('/v1/disputes', disputesRouter);
+app.use('/v1/briefs', briefsRouter);
+app.use('/v1/evaluation', evaluationRouter);
+app.use('/v1', paymentsRouter);
+app.use('/v1/disputes', opinionsRouter);
+app.use('/v1/admin', adminRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
