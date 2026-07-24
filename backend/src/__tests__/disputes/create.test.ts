@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createDispute, getDisputes, getDispute, updateDispute } from '../../services/disputes';
 import { prisma } from '../../db/prisma';
+import { redis } from '../../config/redis';
 import { logger } from '../../utils/logger';
 import { ValidationError, NotFoundError, ConflictError, UnauthorizedError, RateLimitError } from '../../utils/errors';
 import { authMiddleware } from '../../middleware/auth';
@@ -35,8 +36,11 @@ vi.mock('../../middleware/auth', () => ({
 
 vi.mock('../../config/redis', () => ({
   redis: {
-    incr: vi.fn(),
+    get: vi.fn().mockResolvedValue(null),
     setex: vi.fn(),
+    del: vi.fn(),
+    keys: vi.fn().mockResolvedValue([]),
+    incr: vi.fn(),
     ttl: vi.fn(),
     decr: vi.fn(),
   },
@@ -226,11 +230,12 @@ describe('Disputes Service - create/get/update', () => {
       expect(result.nextCursor).toBe(manyDisputes[19].id);
     });
 
-    it('caps limit at 100', async () => {
+    it('caps limit at 50', async () => {
+      (redis.get as any).mockResolvedValue(null);
       (prisma.dispute.findMany as any).mockResolvedValue([]);
       await getDisputes('user_1', { limit: 999 });
       const callArgs = (prisma.dispute.findMany as any).mock.calls[0];
-      expect(callArgs[0].take).toBeLessThanOrEqual(101);
+      expect(callArgs[0].take).toBeLessThanOrEqual(51);
     });
   });
 

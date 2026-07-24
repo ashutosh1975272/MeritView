@@ -8,6 +8,11 @@ import { getEvalPrompt, EVAL_PROMPT_VERSION } from '../../prompts/eval-v3.2';
 import { decrypt } from '../../utils/crypto';
 import { ValidationError, NotFoundError } from '../../utils/errors';
 import { getEnv } from '../../config/env';
+import { dispatchWithFallback } from './provider-fallback';
+import { hashContent, getCachedEvaluation, setCachedEvaluation } from './content-cache';
+import { startProfile, endProfile, getProfileSummary, clearProfile } from './profiler';
+import { triggerSlackAlertIfOverThreshold } from '../../jobs/cost-aggregation/job';
+import { sendCostAlert } from '../../services/notifications/slack';
 
 const env = getEnv();
 const MIN_SUCCESSFUL_EVALUATORS = 3;
@@ -20,6 +25,8 @@ const providerConfigs = [
   { providerKey: 'groq-llama', name: 'groq', model: 'llama-3-70b-8192' },
   { providerKey: 'groq-mixtral', name: 'groq', model: 'mixtral-8x7b-32768' },
   { providerKey: 'gemini-pro', name: 'gemini', model: 'gemini-1.5-pro' },
+  { providerKey: 'gpt-4-turbo', name: 'openai', model: 'gpt-4-turbo' },
+  { providerKey: 'claude-3.5-sonnet', name: 'anthropic', model: 'claude-3.5-sonnet' },
 ];
 
 export const evaluationRegistry = new ProviderRegistry();
@@ -31,6 +38,22 @@ export function initEvaluationRegistry(): void {
   }
   if (env.GEMINI_API_KEY) {
     evaluationRegistry.register('gemini-pro', createGemini15ProProvider(env.GEMINI_API_KEY));
+  }
+  if (env.OPENAI_API_KEY) {
+    const { createGPT4Provider } = require('../../providers/gpt4.provider');
+    evaluationRegistry.register('gpt-4-turbo', createGPT4Provider(env.OPENAI_API_KEY));
+  }
+  if (env.ANTHROPIC_API_KEY) {
+    const { createClaude35SonnetProvider } = require('../../providers/claude.provider');
+    evaluationRegistry.register('claude-3.5-sonnet', createClaude35SonnetProvider(env.ANTHROPIC_API_KEY));
+  }
+  if (env.OPENROUTER_API_KEY) {
+    const { createOpenRouterProvider } = require('../../providers/openrouter.provider');
+    evaluationRegistry.register('openrouter-auto', createOpenRouterProvider(env.OPENROUTER_API_KEY));
+  }
+  if (env.NVIDIA_API_KEY) {
+    const { createNvidiaNimProvider } = require('../../providers/nvidia.provider');
+    evaluationRegistry.register('nvidia-nim', createNvidiaNimProvider(env.NVIDIA_API_KEY));
   }
 }
 
@@ -69,7 +92,9 @@ export async function createEvaluationJob(input: EvaluationJobInput): Promise<Ev
       evaluatorOutputs: true,
       briefs: true,
       payments: true,
-      parties: true,
+      parties: {
+        include: { briefs: true },
+      },
     },
   });
 
@@ -77,11 +102,25 @@ export async function createEvaluationJob(input: EvaluationJobInput): Promise<Ev
     throw new NotFoundError('Dispute not found');
   }
 
-  if (dispute.state !== 'PAYMENT_PENDING' && dispute.state !== 'UNDER_ANALYSIS') {
+  if (dispute.state !== 'PAYMENT_PENDING' && dispute.state !== 'UNDER_ANALYSIS' && dispute.state !== 'AWAITING_BRIEFS') {
     throw new ValidationError(`Cannot evaluate dispute in state: ${dispute.state}`);
   }
 
-  const brief = dispute.briefs.find(b => b.status === 'SUBMITTED');
+  const twoPartyCheck = dispute.parties.length > 1;
+  if (twoPartyCheck) {
+    const initiatorSubmitted = dispute.parties.some(
+      p => p.role === 'INITIATOR' && p.briefs.some(b => b.status === 'SUBMITTED')
+    );
+    const respondentSubmitted = dispute.parties.some(
+      p => p.role === 'RESPONDENT' && p.briefs.some(b => b.status === 'SUBMITTED')
+    );
+
+    if (!initiatorSubmitted || !respondentSubmitted) {
+      throw new ValidationError('Both parties must submit briefs before evaluation');
+    }
+  }
+
+  const brief = dispute.briefs.find(b => b.status === 'SUBMITTED' || b.status === 'SEALED');
   if (!brief) {
     throw new ValidationError('No submitted brief found for this dispute');
   }
@@ -91,13 +130,38 @@ export async function createEvaluationJob(input: EvaluationJobInput): Promise<Ev
     brief.contentEncryptionKeyId
   );
 
+  const contentHash = hashContent(decryptedContent);
+  const cachedResult = await getCachedEvaluation(contentHash);
+  if (cachedResult) {
+    logger.info('Using cached evaluation result', { disputeId: input.disputeId, contentHash: contentHash.slice(0, 12) });
+    const cost = cachedResult.evaluatorOutputs?.reduce((s: number, o: any) => s + (o.costUsd || 0), 0) || 0;
+    await triggerSlackAlertIfOverThreshold(input.disputeId, cost);
+    await sendCostAlert(input.disputeId, cost);
+    return cachedResult;
+  }
+
   await prisma.dispute.update({
     where: { id: input.disputeId },
     data: { state: 'UNDER_ANALYSIS', stateChangedAt: new Date() },
   });
 
   const sanitizedContent = sanitizeForEvaluation(decryptedContent);
+  startProfile(input.disputeId, 'all', 0);
   const result = await dispatchEvaluators(input.disputeId, sanitizedContent);
+
+  const profile = getProfileSummary(input.disputeId);
+  logger.info('Evaluation dispatch profile', {
+    disputeId: input.disputeId,
+    totalTimeMs: profile.totalTimeMs,
+    successRate: profile.successRate,
+  });
+  clearProfile(input.disputeId);
+
+  const totalCost = result.evaluatorOutputs.reduce((s, o) => s + o.costUsd, 0);
+  await triggerSlackAlertIfOverThreshold(input.disputeId, totalCost);
+  await sendCostAlert(input.disputeId, totalCost);
+
+  await setCachedEvaluation(contentHash, result);
 
   return result;
 }

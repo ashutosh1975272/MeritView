@@ -23,6 +23,15 @@ vi.mock('../../utils/logger', () => ({
   },
 }));
 
+vi.mock('../../config/redis', () => ({
+  redis: {
+    get: vi.fn().mockResolvedValue(null),
+    setex: vi.fn(),
+    del: vi.fn(),
+    keys: vi.fn().mockResolvedValue([]),
+  },
+}));
+
 describe('Disputes Service - withdrawDispute', () => {
   beforeEach(() => {
     vi.clearAllMocks();

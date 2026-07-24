@@ -19,6 +19,7 @@ const BCRYPT_COST = 12;
 const REFRESH_TOKEN_TTL = 7 * 24 * 60 * 60;
 const PASSWORD_RESET_TTL = 60 * 60;
 const VERIFICATION_TOKEN_TTL = 24 * 60 * 60;
+const USER_CACHE_TTL = 5 * 60;
 
 export interface UserPayload {
   id: string;
@@ -262,24 +263,46 @@ export async function completePasswordReset(token: string, newPassword: string):
   await redis.del(`reset:${tokenHash}`);
 
   const keys = await redis.keys('refresh:*');
+  const pipeline = [];
   for (const key of keys) {
     const data = await redis.get(key);
     if (data) {
       const { userId: storedUserId } = JSON.parse(data);
       if (storedUserId === userId) {
-        await redis.del(key);
+        pipeline.push(key);
       }
     }
+  }
+  if (pipeline.length > 0) {
+    await Promise.all(pipeline.map(k => redis.del(k)));
   }
 
   logger.info('Password reset completed', { userId });
 }
 
-export async function getMe(userId: string): Promise<UserPayload> {
+async function getCachedUser(userId: string): Promise<{
+  id: string; email: string; accountType: string; emailVerified: boolean; deletedAt: Date | null;
+} | null> {
+  const cacheKey = `user:${userId}`;
+  const cached = await redis.get(cacheKey);
+  if (cached) {
+    return JSON.parse(cached);
+  }
+
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { id: true, email: true, accountType: true, emailVerified: true, deletedAt: true },
   });
+
+  if (user) {
+    await redis.setex(cacheKey, USER_CACHE_TTL, JSON.stringify(user));
+  }
+
+  return user;
+}
+
+export async function getMe(userId: string): Promise<UserPayload> {
+  const user = await getCachedUser(userId);
 
   if (!user || user.deletedAt) {
     throw new NotFoundError('User not found');
@@ -345,14 +368,18 @@ export async function deleteAccount(userId: string): Promise<void> {
   });
 
   const keys = await redis.keys('refresh:*');
+  const pipeline = [];
   for (const key of keys) {
     const data = await redis.get(key);
     if (data) {
       const { userId: storedUserId } = JSON.parse(data);
       if (storedUserId === userId) {
-        await redis.del(key);
+        pipeline.push(key);
       }
     }
+  }
+  if (pipeline.length > 0) {
+    await Promise.all(pipeline.map(k => redis.del(k)));
   }
 
   const { sendAccountDeletionEmail } = await import('../email');
@@ -371,7 +398,7 @@ export async function verifyAccessToken(token: string): Promise<UserPayload> {
       throw new UnauthorizedError('Invalid token type');
     }
 
-    const user = await prisma.user.findUnique({ where: { id: decoded.userId } });
+    const user = await getCachedUser(decoded.userId);
     if (!user || user.deletedAt) {
       throw new UnauthorizedError('User not found');
     }

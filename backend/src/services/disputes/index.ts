@@ -2,6 +2,7 @@ import { Prisma, DisputeState, DisputeCategory, PricingTier } from '@prisma/clie
 import { prisma } from '../../db/prisma';
 import { logger } from '../../utils/logger';
 import { ValidationError, NotFoundError, ConflictError } from '../../utils/errors';
+import { redis } from '../../config/redis';
 
 export interface CreateDisputeInput {
   category: DisputeCategory;
@@ -37,6 +38,17 @@ export interface DisputeWithDetails {
   payments: any[];
   documents: any[];
   briefPrepSessions: any[];
+}
+
+const CACHE_TTL_SECONDS = 300;
+const MAX_PAGE_SIZE = 50;
+
+function listCacheKey(userId: string, state?: string, category?: string, cursor?: string, limit?: number): string {
+  return `disputes:list:${userId}:${state || ''}:${category || ''}:${cursor || ''}:${limit || ''}`;
+}
+
+function detailCacheKey(disputeId: string): string {
+  return `disputes:detail:${disputeId}`;
 }
 
 export function getDefaultPriceForTier(tier: PricingTier): number {
@@ -141,8 +153,16 @@ export async function getDisputes(userId: string, options?: {
   limit?: number;
   cursor?: string;
 }): Promise<{ data: DisputeWithDetails[]; nextCursor?: string; hasMore: boolean }> {
-  const limit = Math.min(options?.limit || 20, 100);
+  const limit = Math.min(options?.limit || 20, MAX_PAGE_SIZE);
   const cursor = options?.cursor;
+
+  const cacheKey = listCacheKey(userId, options?.state, options?.category, cursor, limit);
+  const cached = await redis.get(cacheKey);
+  if (cached) {
+    logger.debug('Dispute list cache hit', { userId });
+    return JSON.parse(cached);
+  }
+
   const where: any = {
     initiatorUserId: userId,
     deletedAt: null,
@@ -178,14 +198,32 @@ export async function getDisputes(userId: string, options?: {
     nextCursor = disputes[disputes.length - 1]?.id;
   }
 
-  return {
+  const result = {
     data: disputes as unknown as DisputeWithDetails[],
     nextCursor,
     hasMore,
   };
+
+  await redis.setex(cacheKey, CACHE_TTL_SECONDS, JSON.stringify(result));
+
+  return result;
 }
 
 export async function getDispute(userId: string, disputeId: string): Promise<DisputeWithDetails> {
+  const cacheKey = detailCacheKey(disputeId);
+  const cached = await redis.get(cacheKey);
+  if (cached) {
+    logger.debug('Dispute detail cache hit', { disputeId });
+    const parsed = JSON.parse(cached);
+    if (parsed.deletedAt) {
+      throw new NotFoundError('Dispute not found');
+    }
+    if (parsed.initiatorUserId !== userId) {
+      throw new NotFoundError('Dispute not found');
+    }
+    return parsed;
+  }
+
   const dispute = await prisma.dispute.findUnique({
     where: { id: disputeId },
     include: {
@@ -224,6 +262,8 @@ export async function getDispute(userId: string, disputeId: string): Promise<Dis
   if (dispute.initiatorUserId !== userId) {
     throw new NotFoundError('Dispute not found');
   }
+
+  await redis.setex(cacheKey, CACHE_TTL_SECONDS, JSON.stringify(dispute));
 
   return dispute as unknown as DisputeWithDetails;
 }
@@ -292,7 +332,21 @@ export async function updateDispute(userId: string, disputeId: string, input: Up
 
   logger.info('Dispute updated', { disputeId, userId });
 
+  await invalidateDisputeCache(disputeId);
+
   return updated as unknown as DisputeWithDetails;
+}
+
+async function invalidateDisputeCache(disputeId: string): Promise<void> {
+  try {
+    await redis.del(detailCacheKey(disputeId));
+    const listKeys = await redis.keys('disputes:list:*');
+    if (listKeys.length > 0) {
+      await Promise.all(listKeys.map((key: string) => redis.del(key)));
+    }
+  } catch (err) {
+    logger.error('Failed to invalidate dispute cache', { disputeId, error: err });
+  }
 }
 
 export async function withdrawDispute(userId: string, disputeId: string): Promise<DisputeWithDetails> {
@@ -360,6 +414,8 @@ export async function withdrawDispute(userId: string, disputeId: string): Promis
   });
 
   logger.info('Dispute withdrawn', { disputeId, userId });
+
+  await invalidateDisputeCache(disputeId);
 
   return updated as unknown as DisputeWithDetails;
 }

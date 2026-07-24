@@ -131,6 +131,7 @@ model User {
   
   @@index([email])
   @@index([createdAt], name: "idx_users_created_at")
+  @@index([deletedAt], name: "idx_users_deleted_at")
   @@map("users")
 }
 
@@ -167,6 +168,7 @@ model Dispute {
   @@index([initiatorUserId], name: "idx_disputes_initiator")
   @@index([state], name: "idx_disputes_state_active")
   @@index([createdAt], name: "idx_disputes_created_at")
+  @@index([initiatorUserId, state, createdAt, id], name: "idx_disputes_list_covering")
   @@map("disputes")
 }
 

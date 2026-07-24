@@ -7,6 +7,8 @@ import { helmetMiddleware } from './middleware/helmet';
 import { corsMiddleware } from './middleware/cors';
 import { requestIdMiddleware } from './middleware/requestId';
 import { generalRateLimiter } from './middleware/rateLimit';
+import { compressionMiddleware } from './middleware/compression';
+import { timingMiddleware } from './middleware/timing';
 import { errorHandler, notFoundHandler } from './middleware/error';
 import { authMiddleware, AuthenticatedRequest } from './middleware/auth';
 
@@ -22,6 +24,8 @@ app.use(express.json({
     req.rawBody = buf.toString('utf8');
   },
 }));
+app.use(compressionMiddleware);
+app.use(timingMiddleware);
 app.use(requestIdMiddleware);
 app.use(generalRateLimiter);
 
@@ -41,6 +45,7 @@ import { evaluationRouter } from './routes/v1/evaluation.routes';
 import { paymentsRouter } from './routes/v1/payments.routes';
 import { opinionsRouter } from './routes/v1/opinions.routes';
 import { adminRouter } from './routes/v1/admin.routes';
+import { v2Router } from './routes/v2';
 
 app.use('/v1/auth', authRouter);
 app.use('/v1/users', userRouter);
@@ -50,6 +55,12 @@ app.use('/v1/evaluation', evaluationRouter);
 app.use('/v1', paymentsRouter);
 app.use('/v1/disputes', opinionsRouter);
 app.use('/v1/admin', adminRouter);
+
+app.use('/v2', v2Router);
+
+app.get('/v2/version', (req: Request, res: Response) => {
+  res.json({ version: '2.0.0', name: 'MeritView API v2' });
+});
 
 app.use(notFoundHandler);
 app.use(errorHandler);

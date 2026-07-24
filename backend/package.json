@@ -25,6 +25,7 @@
     "@sentry/node": "^8.0.0",
     "bcrypt": "^6.0.0",
     "bullmq": "^5.7.0",
+    "compression": "^1.8.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
@@ -59,6 +60,16 @@
     "vitest": "^1.6.0"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["@prisma/client", "@prisma/engines", "bcrypt", "esbuild", "msgpackr-extract", "prisma", "puppeteer", "puppeteer-core", "@puppeteer/browsers"]
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "bcrypt",
+      "esbuild",
+      "msgpackr-extract",
+      "prisma",
+      "puppeteer",
+      "puppeteer-core",
+      "@puppeteer/browsers"
+    ]
   }
 }

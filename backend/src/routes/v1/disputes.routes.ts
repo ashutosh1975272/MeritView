@@ -40,7 +40,11 @@ const getDisputesSchema = z.object({
   query: z.object({
     state: z.string().optional(),
     category: z.string().optional(),
-    limit: z.string().transform(v => parseInt(v, 10)).optional(),
+    limit: z.string().transform(v => {
+      const n = parseInt(v, 10);
+      if (n > 50) throw new Error('Page size limit is 50');
+      return n;
+    }).optional(),
     cursor: z.string().optional(),
   }),
 });

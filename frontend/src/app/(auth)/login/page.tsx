@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
@@ -11,7 +11,7 @@ type LoginForm = {
   password: string;
 };
 
-export default function LoginPage() {
+const LoginPage = memo(function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { login, isLoading: authLoading, error: authError } = useAuthStore();
@@ -172,4 +172,6 @@ export default function LoginPage() {
       </div>
     </div>
   );
-}
+});
+
+export default LoginPage;

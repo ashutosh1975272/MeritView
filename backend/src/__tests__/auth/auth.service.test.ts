@@ -281,6 +281,7 @@ describe('Auth Service', () => {
 
   describe('getMe', () => {
     it('should return user profile', async () => {
+      (redis.get as any).mockResolvedValue(null);
       (prisma.user.findUnique as any).mockResolvedValue({
         id: 'user_123',
         email: 'test@example.com',
@@ -293,9 +294,27 @@ describe('Auth Service', () => {
 
       expect(result.id).toBe('user_123');
       expect(result.email).toBe('test@example.com');
+      expect(redis.setex).toHaveBeenCalledWith('user:user_123', 300, expect.any(String));
+    });
+
+    it('should return user from cache', async () => {
+      (redis.get as any).mockResolvedValue(JSON.stringify({
+        id: 'user_123',
+        email: 'test@example.com',
+        accountType: 'STANDARD',
+        emailVerified: true,
+        deletedAt: null,
+      }));
+
+      const result = await getMe('user_123');
+
+      expect(result.id).toBe('user_123');
+      expect(result.email).toBe('test@example.com');
+      expect(prisma.user.findUnique).not.toHaveBeenCalled();
     });
 
     it('should throw error for non-existent user', async () => {
+      (redis.get as any).mockResolvedValue(null);
       (prisma.user.findUnique as any).mockResolvedValue(null);
 
       await expect(getMe('user_123')).rejects.toThrow(NotFoundError);

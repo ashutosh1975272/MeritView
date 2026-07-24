@@ -16,6 +16,13 @@ const envSchema = z.object({
   
   GROQ_API_KEY: z.string().optional(),
   GEMINI_API_KEY: z.string().optional(),
+  OPENAI_API_KEY: z.string().optional(),
+  ANTHROPIC_API_KEY: z.string().optional(),
+  OPENROUTER_API_KEY: z.string().optional(),
+  NVIDIA_API_KEY: z.string().optional(),
+  SLACK_ALERT_WEBHOOK: z.string().optional(),
+  TEXTRACT_ENDPOINT: z.string().optional(),
+  GOOGLE_VISION_ENDPOINT: z.string().optional(),
   
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),

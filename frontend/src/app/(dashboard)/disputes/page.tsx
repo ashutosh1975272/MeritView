@@ -1,8 +1,7 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -32,29 +31,32 @@ const stateLabels: Record<string, string> = {
 };
 
 export default function DisputesPage() {
+  const queryClient = useQueryClient();
   const { data: disputes, isLoading, error, refetch } = useQuery<Dispute[]>({
     queryKey: ['disputes'],
     queryFn: () => apiRequest<Dispute[]>('/v1/disputes'),
+    staleTime: 300000,
   });
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-4" role="status" aria-label="Loading disputes">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900">My Disputes</h1>
+          <h1 className="text-2xl font-bold text-gray-900" id="disputes-heading">My Disputes</h1>
         </div>
         {[1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-32 w-full" />
+          <Skeleton key={i} className="h-32 w-full" aria-hidden="true" />
         ))}
+        <span className="sr-only">Loading your disputes...</span>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="text-center py-12">
+      <div className="text-center py-12" role="alert" aria-live="assertive">
         <p className="text-red-600 mb-4">Failed to load disputes</p>
-        <Button onClick={() => refetch()}>Retry</Button>
+        <Button onClick={() => { queryClient.invalidateQueries({ queryKey: ['disputes'] }); refetch(); }}>Retry</Button>
       </div>
     );
   }
@@ -62,15 +64,15 @@ export default function DisputesPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">My Disputes</h1>
+        <h1 className="text-2xl font-bold text-gray-900" id="disputes-heading">My Disputes</h1>
         <Link href="/disputes/new">
-          <Button>New Dispute</Button>
+          <Button aria-label="Create new dispute">New Dispute</Button>
         </Link>
       </div>
 
       {!disputes || disputes.length === 0 ? (
-        <Card className="p-12 text-center">
-          <div className="text-6xl mb-4">⚖️</div>
+        <Card className="p-12 text-center" role="status" aria-label="No disputes found">
+          <div className="text-6xl mb-4" aria-hidden="true">&#9878;&#65039;</div>
           <h2 className="text-xl font-semibold text-gray-700 mb-2">No disputes yet</h2>
           <p className="text-gray-500 mb-6">Create your first dispute to get started with AI-powered contract analysis.</p>
           <Link href="/disputes/new">
@@ -78,10 +80,10 @@ export default function DisputesPage() {
           </Link>
         </Card>
       ) : (
-        <div className="grid gap-4">
-          {disputes.map((dispute) => (
-            <Link key={dispute.id} href={`/disputes/${dispute.id}`}>
-              <Card className="p-4 hover:shadow-md transition-shadow cursor-pointer">
+        <div className="grid gap-4" role="list" aria-label="List of your disputes">
+          {disputes.map((dispute, index) => (
+            <Link key={dispute.id} href={`/disputes/${dispute.id}`} role="listitem" aria-label={`Dispute ${index + 1}: ${dispute.title}, status ${stateLabels[dispute.state] || dispute.state}`}>
+              <Card className="p-4 hover:shadow-md transition-shadow cursor-pointer focus-visible:ring-2 focus-visible:ring-blue-500">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold text-gray-900">{dispute.title}</h3>
