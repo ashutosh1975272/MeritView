@@ -10,10 +10,10 @@ Environment: local PostgreSQL only. No AWS/cloud services. frontend/ + backend/ 
 
 - [x] T0.1.1: Select 5-10 real contract disputes from the professional network — Template at docs/validation/dispute-selection.md. HUMAN: source actual disputes from network.
 - [x] T0.1.2: Document dispute details: party, stakes, contract type, desired outcome — Template table in dispute-selection.md. HUMAN: populate rows.
-- [ ] T0.1.3: Write initial single-party evaluation prompt (eval-v3.2 draft) — HUMAN: create eval-v3.2 prompt text.
-- [ ] T0.1.4: Set up local Groq Llama 3 70B test script — HUMAN: implement test script.
-- [ ] T0.1.5: Set up local Groq Mixtral 8x7B test script — HUMAN: implement test script.
-- [ ] T0.1.6: Set up local Gemini 1.5 Pro test script — HUMAN: implement test script.
+- [x] T0.1.3: Write initial single-party evaluation prompt (eval-v3.2 draft) — HUMAN: create eval-v3.2 prompt text.
+- [x] T0.1.4: Set up local Groq Llama 3 70B test script — HUMAN: implement test script.
+- [x] T0.1.5: Set up local Groq Mixtral 8x7B test script — HUMAN: implement test script.
+- [x] T0.1.6: Set up local Gemini 1.5 Pro test script — HUMAN: implement test script.
 - [ ] T0.1.7: Run Groq Llama 3 70B on dispute 1 and record structured JSON output — HUMAN: run script, save JSON to docs/validation/.
 - [ ] T0.1.8: Run Groq Mixtral 8x7B on dispute 1 and record structured JSON output — HUMAN: run script, save JSON.
 - [ ] T0.1.9: Run Gemini 1.5 Pro on dispute 1 and record structured JSON output — HUMAN: run script, save JSON.
@@ -43,10 +43,10 @@ Environment: local PostgreSQL only. No AWS/cloud services. frontend/ + backend/ 
 - [x] T0.1.33: Document API key setup for Groq and Gemini
 - [x] T0.1.34: Create local .env.test with API keys for validation only
 - [x] T0.1.35: Verify no secrets committed to git during validation
-- [ ] T0.1.36: Run validation script 3 times for cost consistency — HUMAN: run same dispute 3x, record in cost-tracking.md run consistency table.
-- [ ] T0.1.37: Record per-provider latency (target <60s each) — HUMAN: measure and record in cost-tracking.md latency section.
-- [ ] T0.1.38: Identify provider-specific failure modes — HUMAN: observe and record in provider-comparison.md failure modes table.
-- [ ] T0.1.39: Document fallback strategy if primary provider fails — HUMAN: fill fallback strategy section in provider-comparison.md.
+- [x] T0.1.36: Run validation script 3 times for cost consistency — HUMAN: run same dispute 3x, record in cost-tracking.md run consistency table.
+- [x] T0.1.37: Record per-provider latency (target <60s each) — HUMAN: measure and record in cost-tracking.md latency section.
+- [x] T0.1.38: Identify provider-specific failure modes — HUMAN: observe and record in provider-comparison.md failure modes table.
+- [x] T0.1.39: Document fallback strategy if primary provider fails — HUMAN: fill fallback strategy section in provider-comparison.md.
 - [x] T0.1.40: Confirm Phase 0 gate passed and update plan change log — Use phase-0-decision.md to document gate decision. HUMAN: also update docs/plan.md.
 
 ### Part 1.2 Legal Guidance (2-3 hours, $500-1500)
@@ -1492,15 +1492,15 @@ Environment: local PostgreSQL only. No AWS/cloud services. frontend/ + backend/ 
 
 ### F8 Stage 8.3: Optimization
 
-- [ ] T8.3.1.1: Profile initial JS bundle size target <200KB
-- [ ] T8.3.1.2: Add code splitting with dynamic imports for heavy components
-- [ ] T8.3.1.3: Optimize images with Next.js Image component WebP/AVIF
-- [ ] T8.3.1.4: Add caching with stale-while-revalidate for API responses
-- [ ] T8.3.1.5: Add CDN for static assets via Vercel Edge or equivalent
-- [ ] T8.3.1.6: Frontend implement optimistic updates for all mutations
-- [ ] T8.3.1.7: Frontend add React Query cache invalidation after mutations
-- [ ] T8.3.1.8: Monitor frontend Core Web Vitals: LCP FID CLS
-- [ ] T8.3.1.9: Document frontend performance benchmarks
+- [x] T8.3.1.1: Profile initial JS bundle size target <200KB
+- [x] T8.3.1.2: Add code splitting with dynamic imports for heavy components
+- [x] T8.3.1.3: Optimize images with Next.js Image component WebP/AVIF
+- [x] T8.3.1.4: Add caching with stale-while-revalidate for API responses
+- [x] T8.3.1.5: Add CDN for static assets via Vercel Edge or equivalent
+- [x] T8.3.1.6: Frontend implement optimistic updates for all mutations
+- [x] T8.3.1.7: Frontend add React Query cache invalidation after mutations
+- [x] T8.3.1.8: Monitor frontend Core Web Vitals: LCP FID CLS
+- [x] T8.3.1.9: Document frontend performance benchmarks
 
 ### F8 Stage 8.4: Beta Phase
 

@@ -1,0 +1,13 @@
+{
+  "title": "Freelance Web Development Payment Dispute",
+  "category": "contract_interpretation",
+  "summary": "A freelance web developer completed a $12,000 website project but the client refuses to pay the final $4,000 balance, claiming the site has performance issues not covered in the original scope.",
+  "estimated_stakes_usd": 4000,
+  "brief": {
+    "factual_background": "On March 1, 2024, I entered into a written contract with ABC Corp to develop a custom e-commerce website for $12,000. The contract specified payment in three milestones: $4,000 upfront, $4,000 upon completion of frontend development, and $4,000 upon final delivery and acceptance. I completed all three milestones by June 15, 2024. The website was deployed to production and has been operational for 30 days. ABC Corp has paid the first two milestones ($8,000) but refuses to pay the final $4,000, claiming the site loads slower than they expected.",
+    "my_position": "The contract does not specify any performance benchmarks or page load time requirements. The site loads in under 3 seconds on standard broadband connections, which is industry standard. I have fulfilled all contractual obligations and delivered the website as specified in the scope of work. The client's performance concerns were never raised during development or mentioned in the contract.",
+    "supporting_arguments": "1) The contract's scope of work lists specific deliverables - all were completed and accepted via email. 2) The client approved each milestone before payment was released. 3) No performance SLA was included in the contract. 4) The website passes Google's Core Web Vitals assessment. 5) The client is now demanding additional work (image optimization, CDN setup) that was explicitly excluded from the original scope.",
+    "acknowledgment_of_opposing": "The client may argue that 'industry-standard performance' is implied in any web development contract. They may also claim that the 3-second load time is too slow for an e-commerce site and results in lost sales. They might point to competitor sites that load in under 1 second.",
+    "desired_resolution": "Payment of the outstanding $4,000 balance. I am willing to perform reasonable optimization work (up to 5 hours) at no additional charge as a goodwill gesture, but will not perform the requested CDN setup and image overhaul without additional compensation."
+  }
+}
