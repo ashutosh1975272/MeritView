@@ -17,7 +17,7 @@ export default function DashboardPage() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Link
-          href="/dashboard/disputes/new"
+          href="/disputes/new"
           className="group p-6 border border-border rounded-lg bg-card hover:border-primary/50 transition-colors"
         >
           <div className="flex items-center gap-3 mb-3">
@@ -32,7 +32,7 @@ export default function DashboardPage() {
         </Link>
 
         <Link
-          href="/dashboard/disputes"
+          href="/disputes"
           className="group p-6 border border-border rounded-lg bg-card hover:border-primary/50 transition-colors"
         >
           <div className="flex items-center gap-3 mb-3">
@@ -47,7 +47,7 @@ export default function DashboardPage() {
         </Link>
 
         <Link
-          href="/dashboard/profile"
+          href="/profile"
           className="group p-6 border border-border rounded-lg bg-card hover:border-primary/50 transition-colors"
         >
           <div className="flex items-center gap-3 mb-3">
@@ -68,7 +68,7 @@ export default function DashboardPage() {
             Recent Disputes
           </h2>
           <Link
-            href="/dashboard/disputes"
+            href="/disputes"
             className="text-sm text-primary hover:underline"
           >
             View all →
@@ -78,7 +78,7 @@ export default function DashboardPage() {
           <div className="p-6 text-center text-muted-foreground">
             <p className="mb-2">No disputes yet</p>
             <Link
-              href="/dashboard/disputes/new"
+              href="/disputes/new"
               className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
             >
               <span>Create your first dispute</span>

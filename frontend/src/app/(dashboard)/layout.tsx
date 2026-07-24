@@ -7,8 +7,8 @@ import { useAuthStore } from '@/stores/useAuthStore';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: '📊' },
-  { name: 'Disputes', href: '/dashboard/disputes', icon: '⚖️' },
-  { name: 'Profile', href: '/dashboard/profile', icon: '👤' },
+  { name: 'Disputes', href: '/disputes', icon: '⚖️' },
+  { name: 'Profile', href: '/profile', icon: '👤' },
 ];
 
 export default function DashboardLayout({
