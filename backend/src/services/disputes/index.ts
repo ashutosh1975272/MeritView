@@ -127,6 +127,11 @@ export async function createDispute(userId: string, input: CreateDisputeInput): 
 
   logger.info('Dispute created', { disputeId: dispute.id, userId });
 
+  const { sendDisputeCreatedEmail } = await import('../email');
+  if (dispute.initiator?.email) {
+    await sendDisputeCreatedEmail(dispute.initiator.email, dispute.title, dispute.id);
+  }
+
   return dispute as unknown as DisputeWithDetails;
 }
 

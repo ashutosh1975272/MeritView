@@ -206,6 +206,28 @@ export const aggregateOpinionSchema = z.object({
   }),
 });
 
+export const evaluatorOutputSchema = z.object({
+  strongestArguments: z.array(z.object({
+    argument: z.string().max(500),
+    reasoning: z.string().max(1000),
+  })).min(3).max(3),
+  weakestPoints: z.array(z.object({
+    point: z.string().max(500),
+    weakness_reason: z.string().max(1000),
+  })).min(3).max(3),
+  factualClaimsNeedingVerification: z.array(z.string().max(500)),
+  logicalFallacies: z.array(z.object({
+    fallacy: z.string().max(200),
+    location: z.string().max(200),
+    explanation: z.string().max(500),
+  })),
+  overallAssessment: z.string().max(2000),
+  considerations: z.array(z.string().max(500)),
+  confidenceScore: z.number().int().min(1).max(10),
+});
+
+export type EvaluatorOutput = z.infer<typeof evaluatorOutputSchema>;
+
 export type CreatePaymentIntentInput = z.infer<typeof createPaymentIntentSchema>['params'];
 export type ConfirmPaymentInput = z.infer<typeof confirmPaymentSchema>;
 export type RefundRequestInput = z.infer<typeof refundRequestSchema>['params'];

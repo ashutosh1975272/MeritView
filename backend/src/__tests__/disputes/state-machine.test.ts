@@ -5,14 +5,18 @@ describe('Disputes State Machine', () => {
   describe('validateDisputeStateTransition', () => {
     const allowedTransitions: Record<string, string[]> = {
       DRAFT: ['BRIEF_SUBMITTED', 'WITHDRAWN'],
-      BRIEF_SUBMITTED: ['PAYMENT_PENDING', 'DRAFT'],
-      PAYMENT_PENDING: ['UNDER_ANALYSIS', 'DRAFT', 'FAILED'],
-      UNDER_ANALYSIS: ['AWAITING_AGGREGATION', 'FAILED'],
+      BRIEF_SUBMITTED: ['PAYMENT_PENDING', 'DRAFT', 'WITHDRAWN'],
+      PAYMENT_PENDING: ['UNDER_ANALYSIS', 'DRAFT', 'FAILED', 'WITHDRAWN'],
+      UNDER_ANALYSIS: ['AWAITING_AGGREGATION', 'FAILED', 'WITHDRAWN'],
       AWAITING_AGGREGATION: ['COMPLETED', 'FAILED'],
       COMPLETED: [],
       WITHDRAWN: [],
       FAILED: [],
       DECLINED: [],
+      AWAITING_COUNTERPARTY: [],
+      IN_PROGRESS: [],
+      AWAITING_BRIEFS: [],
+      AWAITING_COUNTERPARTY_BRIEF: [],
     };
 
     Object.entries(allowedTransitions).filter(([_, allowed]) => allowed.length > 0).forEach(([from, allowedNexts]) => {
@@ -51,6 +55,24 @@ describe('Disputes State Machine', () => {
 
     it('rejects DECLINED -> any state', () => {
       expect(validateDisputeStateTransition('DECLINED', 'UNDER_ANALYSIS')).toBe(false);
+    });
+
+    it('rejects AWAITING_COUNTERPARTY -> any state', () => {
+      expect(validateDisputeStateTransition('AWAITING_COUNTERPARTY', 'DRAFT')).toBe(false);
+      expect(validateDisputeStateTransition('AWAITING_COUNTERPARTY', 'BRIEF_SUBMITTED')).toBe(false);
+    });
+
+    it('rejects IN_PROGRESS -> any state', () => {
+      expect(validateDisputeStateTransition('IN_PROGRESS', 'DRAFT')).toBe(false);
+      expect(validateDisputeStateTransition('IN_PROGRESS', 'COMPLETED')).toBe(false);
+    });
+
+    it('rejects AWAITING_BRIEFS -> any state', () => {
+      expect(validateDisputeStateTransition('AWAITING_BRIEFS', 'DRAFT')).toBe(false);
+    });
+
+    it('rejects AWAITING_COUNTERPARTY_BRIEF -> any state', () => {
+      expect(validateDisputeStateTransition('AWAITING_COUNTERPARTY_BRIEF', 'DRAFT')).toBe(false);
     });
 
     it('rejects unknown state transitions', () => {

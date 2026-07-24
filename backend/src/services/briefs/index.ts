@@ -71,6 +71,28 @@ export function basicContentModeration(content: string): { passed: boolean; reas
     }
   }
 
+  const harassmentPatterns = [
+    /\b(?:harass(?:ment|ing|es|ed)?|bully(?:ing|ies)?|bullied|stalk(?:ing|er|ed|s)?)\b/i,
+    /\b(?:discriminat(?:ion|ory)|slur|bigot(?:ry|ed)?)\b/i,
+  ];
+
+  for (const pattern of harassmentPatterns) {
+    if (pattern.test(lower)) {
+      return { passed: false, reason: 'Content contains harassment or discriminatory material' };
+    }
+  }
+
+  const sexualContentPatterns = [
+    /\b(?:porn(?:ography|ographic)?|explicit\s+sexual|sexually\s+explicit)\b/i,
+    /\b(?:obscene|lewd|pornographic|sexual\s+act)\b/i,
+  ];
+
+  for (const pattern of sexualContentPatterns) {
+    if (pattern.test(lower)) {
+      return { passed: false, reason: 'Content contains sexual content that is not permitted' };
+    }
+  }
+
   const piiPatterns = [
     /\b\d{3}-\d{2}-\d{4}\b/,
     /\b\d{16}\b/,
@@ -235,6 +257,18 @@ export async function submitBrief(userId: string, partyId: string, disputeId: st
   });
 
   logger.info('Brief submitted', { partyId, disputeId, userId });
+
+  const disputeWithUser = await prisma.dispute.findUnique({
+    where: { id: disputeId },
+    include: {
+      initiator: { select: { id: true, email: true, displayName: true } },
+    },
+  });
+
+  if (disputeWithUser?.initiator?.email) {
+    const { sendBriefSubmittedEmail } = await import('../email');
+    await sendBriefSubmittedEmail(disputeWithUser.initiator.email, dispute.title, disputeId);
+  }
 
   return {
     ...result,

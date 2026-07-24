@@ -172,6 +172,15 @@ export async function confirmPayment(disputeId: string, userId: string, paymentI
 
   logger.info('Payment confirmed', { disputeId, userId, paymentIntentId });
 
+  const { sendPaymentSuccessEmail } = await import('../email');
+  if (result.dispute.initiator?.email) {
+    await sendPaymentSuccessEmail(
+      result.dispute.initiator.email,
+      result.dispute.title,
+      Number(result.dispute.priceUsd)
+    );
+  }
+
   return result.dispute;
 }
 
@@ -287,6 +296,22 @@ export async function handleStripeWebhook(rawBody: string, signature: string): P
             completedAt: new Date(),
           },
         });
+
+        const dispute = await prisma.dispute.findUnique({
+          where: { id: existingPayment.disputeId },
+          include: {
+            initiator: { select: { id: true, email: true } },
+          },
+        });
+
+        if (dispute?.initiator?.email) {
+          const { sendPaymentFailedEmail } = await import('../email');
+          await sendPaymentFailedEmail(
+            dispute.initiator.email,
+            dispute.title,
+            dispute.id
+          );
+        }
 
         logger.info('Payment marked as failed via webhook', {
           paymentId: existingPayment.id,

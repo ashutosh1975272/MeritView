@@ -130,6 +130,78 @@ describe('Disputes Service - withdrawDispute', () => {
     await expect(withdrawDispute('user_1', 'disp_1')).rejects.toThrow(ConflictError);
   });
 
+  it('withdraws a dispute in BRIEF_SUBMITTED state', async () => {
+    const mockDispute = {
+      id: 'disp_1',
+      initiatorUserId: 'user_1',
+      deletedAt: null,
+      state: 'BRIEF_SUBMITTED',
+      payments: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      stateChangedAt: new Date(),
+    };
+
+    (prisma.dispute.findUnique as any).mockResolvedValue(mockDispute);
+    successfulWithdrawal();
+
+    const result = await withdrawDispute('user_1', 'disp_1');
+
+    expect(result.state).toBe('WITHDRAWN');
+  });
+
+  it('withdraws a dispute in UNDER_ANALYSIS state', async () => {
+    const mockDispute = {
+      id: 'disp_1',
+      initiatorUserId: 'user_1',
+      deletedAt: null,
+      state: 'UNDER_ANALYSIS',
+      payments: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      stateChangedAt: new Date(),
+    };
+
+    (prisma.dispute.findUnique as any).mockResolvedValue(mockDispute);
+    successfulWithdrawal();
+
+    const result = await withdrawDispute('user_1', 'disp_1');
+
+    expect(result.state).toBe('WITHDRAWN');
+  });
+
+  it('refund amount matches the original payment amount', async () => {
+    const mockDispute = {
+      id: 'disp_1',
+      initiatorUserId: 'user_1',
+      deletedAt: null,
+      state: 'PAYMENT_PENDING',
+      payments: [{ id: 'pay_1', status: 'SUCCEEDED', amountUsd: 99 }],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      stateChangedAt: new Date(),
+    };
+
+    (prisma.dispute.findUnique as any).mockResolvedValue(mockDispute);
+
+    const mockTx: any = {
+      dispute: { update: vi.fn().mockResolvedValue({ ...mockDispute, state: 'WITHDRAWN' }) },
+      payment: { update: vi.fn().mockResolvedValue({ ...mockDispute.payments[0], status: 'REFUNDED' }) },
+    };
+
+    (prisma.$transaction as any).mockImplementation(async (fn: Function) => fn(mockTx));
+
+    await withdrawDispute('user_1', 'disp_1');
+
+    expect(mockTx.payment.update).toHaveBeenCalledWith({
+      where: { id: 'pay_1' },
+      data: expect.objectContaining({
+        status: 'REFUNDED',
+        refundedAmountUsd: 99,
+      }),
+    });
+  });
+
   it('does not create refund when no successful payments exist', async () => {
     const mockDispute = {
       id: 'disp_1',

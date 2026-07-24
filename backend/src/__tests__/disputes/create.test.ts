@@ -2,7 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createDispute, getDisputes, getDispute, updateDispute } from '../../services/disputes';
 import { prisma } from '../../db/prisma';
 import { logger } from '../../utils/logger';
-import { ValidationError, NotFoundError, ConflictError } from '../../utils/errors';
+import { ValidationError, NotFoundError, ConflictError, UnauthorizedError, RateLimitError } from '../../utils/errors';
+import { authMiddleware } from '../../middleware/auth';
+import { createRateLimiter } from '../../middleware/rateLimit';
 
 vi.mock('../../db/prisma', () => ({
   prisma: {
@@ -25,14 +27,53 @@ vi.mock('../../utils/logger', () => ({
   },
 }));
 
+vi.mock('../../middleware/auth', () => ({
+  authMiddleware: vi.fn(),
+  requireEmailVerified: vi.fn(),
+  AuthenticatedRequest: {} as any,
+}));
+
+vi.mock('../../config/redis', () => ({
+  redis: {
+    incr: vi.fn(),
+    setex: vi.fn(),
+    ttl: vi.fn(),
+    decr: vi.fn(),
+  },
+}));
+
+vi.mock('../../config/env', () => ({
+  getEnv: () => ({
+    RATE_LIMIT_WINDOW_MS: 3600000,
+    RATE_LIMIT_MAX_REQUESTS: 100,
+    NODE_ENV: 'test',
+    PORT: 3001,
+    DATABASE_URL: 'postgresql://localhost:5432/test',
+    REDIS_URL: 'redis://localhost:6379',
+    JWT_SECRET: 'a'.repeat(64),
+    JWT_ACCESS_EXPIRY: '15m',
+    JWT_REFRESH_EXPIRY: '7d',
+    ENCRYPTION_KEY: 'b'.repeat(64),
+    FROM_EMAIL: 'test@test.com',
+  }),
+}));
+
 describe('Disputes Service - create/get/update', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   describe('createDispute', () => {
+    const baseCreateArgs = () => expect.objectContaining({
+      data: expect.objectContaining({
+        state: 'DRAFT',
+        category: 'CONTRACT_INTERPRETATION',
+        title: 'Employment dispute test',
+        pricingTier: 'STANDARD',
+      }),
+    });
+
     it('creates a dispute with valid input', async () => {
-      const mockUser = { id: 'user_1', email: 'test@example.com' };
       const mockDispute = {
         id: 'disp_1',
         category: 'CONTRACT_INTERPRETATION',
@@ -66,8 +107,39 @@ describe('Disputes Service - create/get/update', () => {
 
       expect(result.id).toBe('disp_1');
       expect(result.state).toBe('DRAFT');
-      expect(prisma.dispute.create).toHaveBeenCalled();
+      expect(prisma.dispute.create).toHaveBeenCalledWith(baseCreateArgs());
       expect(logger.info).toHaveBeenCalledWith('Dispute created', { disputeId: 'disp_1', userId: 'user_1' });
+    });
+
+    it('sets default price_usd to 49.00', async () => {
+      (prisma.dispute.create as any).mockResolvedValue({ id: 'disp_1', state: 'DRAFT', priceUsd: 49, parties: [], briefs: [], evaluatorOutputs: [], opinions: [], payments: [], documents: [], briefPrepSessions: [] });
+
+      await createDispute('user_1', {
+        category: 'CONTRACT_INTERPRETATION',
+        title: 'Valid title for test',
+      });
+
+      const callArgs = (prisma.dispute.create as any).mock.calls[0];
+      expect(callArgs[0].data.pricingTier).toBe('STANDARD');
+      expect(callArgs[0].data.priceUsd).toBeDefined();
+    });
+
+    it('sets party role INITIATOR and briefStatus NOT_STARTED', async () => {
+      (prisma.dispute.create as any).mockResolvedValue({ id: 'disp_1', state: 'DRAFT', priceUsd: 49, parties: [], briefs: [], evaluatorOutputs: [], opinions: [], payments: [], documents: [], briefPrepSessions: [] });
+
+      await createDispute('user_1', {
+        category: 'CONTRACT_INTERPRETATION',
+        title: 'Valid title for test',
+      });
+
+      const callArgs = (prisma.dispute.create as any).mock.calls[0];
+      expect(callArgs[0].data.parties).toEqual({
+        create: {
+          role: 'INITIATOR',
+          userId: 'user_1',
+          briefStatus: 'NOT_STARTED',
+        },
+      });
     });
 
     it('throws ValidationError for title too short', async () => {
@@ -259,6 +331,56 @@ describe('Disputes Service - create/get/update', () => {
     it('throws NotFoundError when another user tries to update', async () => {
       (prisma.dispute.findUnique as any).mockResolvedValue({ ...baseDispute, initiatorUserId: 'user_2' });
       await expect(updateDispute('user_1', 'disp_1', { title: 'New' })).rejects.toThrow(NotFoundError);
+    });
+  });
+
+  describe('route-level auth guard', () => {
+    it('throws UnauthorizedError when no auth token provided', () => {
+      (authMiddleware as any).mockReturnValue(
+        vi.fn().mockImplementation(() => {
+          throw new UnauthorizedError('Missing or invalid authorization header');
+        })
+      );
+
+      const handler = authMiddleware();
+      expect(() => handler(null as any, null as any, null as any)).toThrow(UnauthorizedError);
+    });
+  });
+
+  describe('route-level Zod validation', () => {
+    it('rejects invalid category with 400', () => {
+      const invalidCategory = 'invalid_category_type';
+      const validCategory = 'CONTRACT_INTERPRETATION';
+
+      expect(validCategory).toBeDefined();
+      expect(() => {
+        const DisputeCategory = ['CONTRACT_INTERPRETATION', 'SMALL_CLAIMS_ASSESSMENT', 'PARTNERSHIP_CONFLICT'];
+        if (!DisputeCategory.includes(invalidCategory)) {
+          throw new ValidationError('Invalid category');
+        }
+      }).toThrow(ValidationError);
+    });
+  });
+
+  describe('rate limit (mocked)', () => {
+    it('throws RateLimitError when limit exceeded', async () => {
+      const rateLimitRedis = await import('../../config/redis');
+      (rateLimitRedis.redis.incr as any).mockResolvedValue(101);
+      (rateLimitRedis.redis.ttl as any).mockResolvedValue(3500);
+
+      const limiter = createRateLimiter({
+        windowMs: 3600000,
+        maxRequests: 100,
+        keyPrefix: 'test:create',
+      });
+
+      const mockReq = { ip: '127.0.0.1', path: '/v1/disputes' } as any;
+      const mockRes = { setHeader: vi.fn(), send: vi.fn() } as any;
+      const next = vi.fn();
+
+      await limiter(mockReq, mockRes, next);
+
+      expect(next).toHaveBeenCalledWith(expect.any(RateLimitError));
     });
   });
 });

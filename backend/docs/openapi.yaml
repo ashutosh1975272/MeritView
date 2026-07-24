@@ -2020,9 +2020,9 @@ paths:
                   type: string
                 aggregatorModelId:
                   type: string
-                totalCostUsd:
-                  type: number
-                  minimum: 0
+                  totalCostUsd:
+                    type: number
+                    minimum: 0
       responses:
         '201':
           description: Created
@@ -2039,5 +2039,91 @@ paths:
           $ref: '#/components/responses/UnauthorizedError'
         '403':
           $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /disputes/{disputeId}/evaluate:
+    post:
+      summary: Start evaluation of a dispute
+      operationId: startEvaluation
+      tags:
+        - Evaluation
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: disputeId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  disputeId:
+                    type: string
+                  evaluatorOutputs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EvaluatorOutput'
+                  state:
+                    type: string
+                  successCount:
+                    type: integer
+                  failureCount:
+                    type: integer
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /disputes/{disputeId}/evaluation/status:
+    get:
+      summary: Get evaluation status for a dispute
+      operationId: getEvaluationStatus
+      tags:
+        - Evaluation
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: disputeId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  disputeId:
+                    type: string
+                  state:
+                    $ref: '#/components/schemas/DisputeState'
+                  evaluatorOutputCount:
+                    type: integer
+                  evaluatorOutputs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EvaluatorOutput'
+                  totalCost:
+                    type: number
+                  minSuccessful:
+                    type: integer
+                  successCount:
+                    type: integer
+                  failureCount:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
         '404':
           $ref: '#/components/responses/NotFoundError'

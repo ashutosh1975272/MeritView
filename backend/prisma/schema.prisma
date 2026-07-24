@@ -223,9 +223,11 @@ model Brief {
   sealedAt                    DateTime? @map("sealed_at")
   
   sealHash                    String?  @map("seal_hash") @db.VarChar(64)
+  retentionExpiresAt          DateTime? @map("retention_expires_at")
   
   @@index([disputeId], name: "idx_briefs_dispute")
   @@index([status], name: "idx_briefs_status")
+  @@index([retentionExpiresAt], name: "idx_briefs_retention")
   @@map("briefs")
 }
 

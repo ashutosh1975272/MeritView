@@ -1,0 +1,71 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["strongest_arguments", "weakest_points", "factual_concerns", "logical_fallacies", "overall_assessment", "considerations", "confidence_score"],
+  "properties": {
+    "strongest_arguments": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "required": ["argument", "reasoning"],
+        "properties": {
+          "argument": { "type": "string", "maxLength": 500 },
+          "reasoning": { "type": "string", "maxLength": 1000 }
+        }
+      }
+    },
+    "weakest_points": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "required": ["point", "weakness_reason"],
+        "properties": {
+          "point": { "type": "string", "maxLength": 500 },
+          "weakness_reason": { "type": "string", "maxLength": 1000 }
+        }
+      }
+    },
+    "factual_concerns": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["claim", "verification_needed"],
+        "properties": {
+          "claim": { "type": "string", "maxLength": 500 },
+          "verification_needed": { "type": "string", "maxLength": 500 }
+        }
+      }
+    },
+    "logical_fallacies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["fallacy_type", "description"],
+        "properties": {
+          "fallacy_type": { "type": "string", "maxLength": 200 },
+          "description": { "type": "string", "maxLength": 500 }
+        }
+      }
+    },
+    "overall_assessment": {
+      "type": "string",
+      "maxLength": 2000
+    },
+    "considerations": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 500
+      }
+    },
+    "confidence_score": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10
+    }
+  }
+}

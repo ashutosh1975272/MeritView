@@ -8,6 +8,8 @@ import { ValidationError, NotFoundError, ForbiddenError } from '../../utils/erro
 
 const env = getEnv();
 
+export const DISCLAIMER_VERSION = '1.0';
+
 export interface OpinionContentData {
   executiveSummary: string;
   keyIssues: Array<{ issue: string; agreementLevel: 'high' | 'medium' | 'low' }>;
@@ -159,6 +161,11 @@ export async function createOpinionFromAggregation(
     throw new ValidationError('Opinion already exists for this dispute');
   }
 
+  const minDisclaimerCount = 4;
+  if (!data.content.disclaimers || data.content.disclaimers.length < minDisclaimerCount) {
+    throw new ValidationError(`Opinion must include at least ${minDisclaimerCount} disclaimers`);
+  }
+
   const keyId = getActiveKeyId();
   const encrypted = encrypt(JSON.stringify(data.content), keyId);
 
@@ -205,6 +212,18 @@ export async function createOpinionFromAggregation(
       completedAt: new Date(),
     },
   });
+
+  const dispute = await prisma.dispute.findUnique({
+    where: { id: disputeId },
+    include: {
+      initiator: { select: { id: true, email: true, displayName: true } },
+    },
+  });
+
+  if (dispute?.initiator?.email) {
+    const { sendOpinionReadyEmail } = await import('../email');
+    await sendOpinionReadyEmail(dispute.initiator.email, dispute.title, disputeId);
+  }
 
   logger.info('Opinion created from aggregation', {
     disputeId,

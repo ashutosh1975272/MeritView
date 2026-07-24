@@ -1,73 +1,93 @@
-import { Worker, Job } from 'bullmq';
-import IORedis from 'ioredis';
 import { getEnv } from '../config/env';
+import { getEmailConfig, getDkimConfig } from '../config/email';
 import { logger } from '../utils/logger';
-import { emailQueue } from './queues';
+import { InMemoryEmailQueue, EmailJobData } from '../services/email/in-memory-queue';
+import { createTransport } from 'nodemailer';
 
 const env = getEnv();
+const emailConfig = getEmailConfig();
 
-const redisUrl = new URL(env.REDIS_URL);
-
-const connection = new IORedis({
-  host: redisUrl.hostname,
-  port: Number(redisUrl.port),
-  password: redisUrl.password || undefined,
-  maxRetriesPerRequest: null,
-});
-
-interface EmailJobData {
-  to: string;
-  subject: string;
-  html: string;
+export interface EmailQueueMetrics {
+  processed: number;
+  failed: number;
+  deadLetterCount: number;
+  queueDepth: number;
 }
 
-const worker = new Worker<EmailJobData>(
-  'email',
-  async (job: Job<EmailJobData>) => {
-    const { to, subject, html } = job.data;
-    logger.info('Sending email', { to, subject, jobId: job.id });
-
-    const nodemailer = await import('nodemailer');
-    const transporter = nodemailer.default.createTransport({
-      host: env.SMTP_HOST || 'localhost',
-      port: env.SMTP_PORT || 1025,
-      auth: env.SMTP_USER ? {
-        user: env.SMTP_USER,
-        pass: env.SMTP_PASS || '',
-      } : undefined,
-      ignoreTLS: true,
-    });
-
-    await transporter.sendMail({
-      from: env.FROM_EMAIL,
-      to,
-      subject,
-      html,
-    });
-
-    logger.info('Email sent successfully', { to, subject, jobId: job.id });
-  },
-  {
-    connection,
-    concurrency: 5,
+function buildHeaders(): Record<string, string> {
+  const dkim = getDkimConfig();
+  const headers: Record<string, string> = {
+    'X-Mailer': 'MeritView-Mailer',
+    'X-MeritView-Message-Type': 'transactional',
+    'List-Unsubscribe': '<mailto:unsubscribe@meritview.app>',
+  };
+  if (dkim.domainName && dkim.keySelector && dkim.privateKey) {
+    headers['DKIM-Signature'] = `v=1; a=rsa-sha256; c=relaxed/relaxed; d=${dkim.domainName}; s=${dkim.keySelector}`;
   }
-);
-
-worker.on('completed', (job) => {
-  logger.info('Email job completed', { jobId: job.id });
-});
-
-worker.on('failed', (job: Job | undefined, err: Error) => {
-  logger.error('Email job failed', err, { jobId: job?.id, attempts: job?.attemptsMade } as Record<string, unknown>);
-});
-
-worker.on('error', (err: Error) => {
-  logger.error('Email worker error', err);
-});
-
-export async function sendEmailAsync(to: string, subject: string, html: string): Promise<void> {
-  await emailQueue.add('send-email', { to, subject, html });
-  logger.info('Email queued', { to, subject });
+  return headers;
 }
 
-export default worker;
+async function sendEmailDirect(job: EmailJobData): Promise<void> {
+  const transporter = createTransport({
+    host: emailConfig.host,
+    port: emailConfig.port,
+    secure: emailConfig.secure,
+    auth: emailConfig.auth || undefined,
+    ignoreTLS: !emailConfig.secure,
+  });
+
+  const headers = buildHeaders();
+
+  await transporter.sendMail({
+    from: `"${emailConfig.fromName}" <${emailConfig.fromEmail}>`,
+    to: job.to,
+    subject: job.subject,
+    html: job.html,
+    headers,
+  });
+}
+
+export function createEmailWorker(queue: InMemoryEmailQueue): void {
+  queue.processQueue(async (job: EmailJobData) => {
+    try {
+      await sendEmailDirect(job);
+      logger.info('Email sent successfully via worker', { jobId: job.id, to: job.to, subject: job.subject });
+      return { status: 'completed' as const };
+    } catch (error) {
+      logger.error('Email worker send failed', error as Error, {
+        jobId: job.id,
+        to: job.to,
+        subject: job.subject,
+        retryCount: job.retryCount,
+      });
+
+      if (job.retryCount >= job.maxRetries - 1) {
+        logger.info('Email failed after max retries, triggering in-app notification fallback', {
+          jobId: job.id,
+          to: job.to,
+        });
+        triggerInAppNotification(job);
+      }
+
+      return { status: 'failed' as const, error: (error as Error).message };
+    }
+  });
+}
+
+function triggerInAppNotification(job: EmailJobData): void {
+  logger.info('In-app notification triggered as email fallback', {
+    to: job.to,
+    subject: job.subject,
+    jobId: job.id,
+  });
+}
+
+export function handleBounce(email: string, reason: string): void {
+  logger.warn('Email bounce received', { email, reason });
+}
+
+export function handleComplaint(email: string, reason: string): void {
+  logger.warn('Email complaint received', { email, reason });
+}
+
+export { buildHeaders, sendEmailDirect };

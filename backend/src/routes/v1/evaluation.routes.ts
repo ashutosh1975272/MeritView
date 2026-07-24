@@ -5,8 +5,7 @@ import { authMiddleware, AuthenticatedRequest } from '../../middleware/auth';
 import { validate } from '../../middleware/validate';
 import { authRateLimiter } from '../../middleware/rateLimit';
 import { createEvaluationJob, getEvaluationStatus } from '../../services/evaluation';
-import { getBrief } from '../../services/briefs';
-import { NotFoundError, ForbiddenError, ConflictError } from '../../utils/errors';
+import { NotFoundError, ForbiddenError } from '../../utils/errors';
 
 const router = Router() as ReturnType<typeof Router>;
 
@@ -40,12 +39,9 @@ router.post(
         throw new NotFoundError('Party not found for this dispute');
       }
 
-      const brief = await getBrief(req.user!.id, party.id, disputeId);
-      const sanitizedContent = sanitizeForEvaluation(JSON.stringify(brief.sections));
-
       const result = await createEvaluationJob({
         disputeId,
-        briefContent: sanitizedContent,
+        partyId: party.id,
       });
 
       res.json(result);
@@ -69,21 +65,5 @@ router.get(
     }
   }
 );
-
-function sanitizeForEvaluation(content: string): string {
-  const sensitivePatterns = [
-    /jwt_token\s*[:=]\s*['"][^'"]+['"]/gi,
-    /api_key\s*[:=]\s*['"][^'"]+['"]/gi,
-    /password\s*[:=]\s*['"][^'"]+['"]/gi,
-    /token\s*[:=]\s*['"][^'"]+['"]/gi,
-  ];
-
-  let sanitized = content;
-  for (const pattern of sensitivePatterns) {
-    sanitized = sanitized.replace(pattern, '[REDACTED]');
-  }
-
-  return sanitized;
-}
 
 export { router as evaluationRouter };

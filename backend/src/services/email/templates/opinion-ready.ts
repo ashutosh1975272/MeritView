@@ -18,11 +18,12 @@ export function opinionReady(props: OpinionReadyProps): string {
   .button { display: inline-block; padding: 14px 32px; background: #4f46e5; color: #ffffff !important; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; margin: 24px 0; }
   .footer { padding: 24px 40px; background: #f4f4f7; text-align: center; }
   .footer p { color: #888; font-size: 12px; margin: 0; }
+  .logo { max-width: 150px; margin-bottom: 8px; }
 </style>
 </head>
 <body>
 <div class="container">
-  <div class="header"><h1>MeritView</h1></div>
+  <div class="header"><img class="logo" src="https://meritview.app/logo.png" alt="MeritView" /><h1>MeritView</h1></div>
   <div class="body">
     <p>Your AI-generated opinion is ready!</p>
     <p style="font-size:18px; font-weight:600; color:#1a1a2e;">${props.disputeTitle}</p>
@@ -39,6 +40,8 @@ export function opinionReady(props: OpinionReadyProps): string {
     <p><strong>Important:</strong> This is AI-generated analysis, not legal advice. Consult a qualified attorney for legal advice specific to your situation.</p>
   </div>
   <div class="footer">
+    <p>MeritView &mdash; AI-Powered Dispute Resolution</p>
+    <p>Contact: support@meritview.app</p>
     <p>&copy; ${new Date().getFullYear()} MeritView. All rights reserved.</p>
   </div>
 </div>

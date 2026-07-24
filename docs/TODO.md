@@ -28,21 +28,21 @@ Environment: local PostgreSQL only. No AWS/cloud services. frontend/ + backend/ 
 - [ ] T0.1.18: Decision gate: outputs useful and consistent? IF NO stop or pivot
 - [ ] T0.1.19: Document Phase 0 decision and rationale in audit log
 - [ ] T0.1.20: Finalize eval-v3.2 prompt based on validation results
-- [ ] T0.1.21: Create backend/src/prompts/eval-v3.2.ts and enforce immutability
-- [ ] T0.1.22: Add unit test for prompt version string format
-- [ ] T0.1.23: Verify prompt immutability rule: old versions never edited
+- [x] T0.1.21: Create backend/src/prompts/eval-v3.2.ts and enforce immutability
+- [x] T0.1.22: Add unit test for prompt version string format
+- [x] T0.1.23: Verify prompt immutability rule: old versions never edited
 - [ ] T0.1.24: Document prompt testing methodology for future iterations
 - [ ] T0.1.25: Create evaluation metrics spreadsheet (agreement rate, hallucination rate)
 - [ ] T0.1.26: Establish baseline metrics from manual synthesis
 - [ ] T0.1.27: Set up local cost tracking spreadsheet for validation
-- [ ] T0.1.28: Verify all 3 APIs return JSON compatible with schema_v3.json
-- [ ] T0.1.29: Test prompt with ~50-word brief edge case
-- [ ] T0.1.30: Test prompt with ~5000-word brief edge case
-- [ ] T0.1.31: Test prompt with third-party PII edge case
-- [ ] T0.1.32: Test prompt with illegal activity description edge case
-- [ ] T0.1.33: Document API key setup for Groq and Gemini
-- [ ] T0.1.34: Create local .env.test with API keys for validation only
-- [ ] T0.1.35: Verify no secrets committed to git during validation
+- [x] T0.1.28: Verify all 3 APIs return JSON compatible with schema_v3.json
+- [x] T0.1.29: Test prompt with ~50-word brief edge case
+- [x] T0.1.30: Test prompt with ~5000-word brief edge case
+- [x] T0.1.31: Test prompt with third-party PII edge case
+- [x] T0.1.32: Test prompt with illegal activity description edge case
+- [x] T0.1.33: Document API key setup for Groq and Gemini
+- [x] T0.1.34: Create local .env.test with API keys for validation only
+- [x] T0.1.35: Verify no secrets committed to git during validation
 - [ ] T0.1.36: Run validation script 3 times for cost consistency
 - [ ] T0.1.37: Record per-provider latency (target <60s each)
 - [ ] T0.1.38: Identify provider-specific failure modes
@@ -62,13 +62,13 @@ Environment: local PostgreSQL only. No AWS/cloud services. frontend/ + backend/ 
 - [ ] T0.2.9: Incorporate required disclaimers into opinion delivery plan
 - [ ] T0.2.10: Incorporate prohibited jurisdictions into geo-blocking plan
 - [ ] T0.2.11: Obtain written confirmation to proceed
-- [ ] T0.2.12: Store legal documents in infra/legal/ directory
+- [x] T0.2.12: Store legal documents in infra/legal/ directory
 - [ ] T0.2.13: Add legal review checkpoint to CI and release process
 - [ ] T0.2.14: Document legal review cadence as quarterly
 - [ ] T0.2.15: Finalize 4 standard disclaimers list
-- [ ] T0.2.16: Add disclaimer enforcement to opinion creation endpoint
-- [ ] T0.2.17: Create disclaimer versioning strategy
-- [ ] T0.2.18: Verify SEO/meta pages include disclaimer language
+- [x] T0.2.16: Add disclaimer enforcement to opinion creation endpoint
+- [x] T0.2.17: Create disclaimer versioning strategy
+- [x] T0.2.18: Verify SEO/meta pages include disclaimer language
 
 ### Part 1.3 First 20 Users Identified
 
@@ -202,45 +202,45 @@ Environment: local PostgreSQL only. No AWS/cloud services. frontend/ + backend/ 
 
 #### Backend Unit Tests
 
-- [ ] T1.2.1.1: Create backend/src/__tests__/auth/register.test.ts
-- [ ] T1.2.1.2: Test register valid input returns 201, creates user, queues email
-- [ ] T1.2.1.3: Test register duplicate email returns 409
-- [ ] T1.2.1.4: Test register weak password returns 400
-- [ ] T1.2.1.5: Test register missing accept_terms returns 400
-- [ ] T1.2.1.6: Test register display_name >100 chars returns 400
-- [ ] T1.2.1.7: Test register invalid email format returns 400
-- [ ] T1.2.1.8: Create backend/src/__tests__/auth/verify-email.test.ts
-- [ ] T1.2.1.9: Test verify-email valid token returns 200
-- [ ] T1.2.1.10: Test verify-email expired token returns 400
-- [ ] T1.2.1.11: Test verify-email invalid token returns 400
-- [ ] T1.2.1.12: Create backend/src/__tests__/auth/login.test.ts
-- [ ] T1.2.1.13: Test login correct credentials returns 200 with tokens
-- [ ] T1.2.1.14: Test login unverified email returns 403
-- [ ] T1.2.1.15: Test login wrong password returns 401
-- [ ] T1.2.1.16: Test login non-existent email returns 401
-- [ ] T1.2.1.17: Test rate limit 6 attempts in 1 minute returns 429
-- [ ] T1.2.1.18: Test rate limit headers present in every response
-- [ ] T1.2.1.19: Create backend/src/__tests__/auth/refresh.test.ts
-- [ ] T1.2.1.20: Test refresh valid token returns 200 and new tokens
-- [ ] T1.2.1.21: Test refresh invalid token returns 401
-- [ ] T1.2.1.22: Test refresh expired token returns 401
-- [ ] T1.2.1.23: Create backend/src/__tests__/auth/logout.test.ts
-- [ ] T1.2.1.24: Test logout invalidates refresh token
-- [ ] T1.2.1.25: Test logout then refresh returns 401
-- [ ] T1.2.1.26: Create backend/src/__tests__/auth/password-reset.test.ts
-- [ ] T1.2.1.27: Test reset request existing email returns 200 and queues email
-- [ ] T1.2.1.28: Test reset request non-existent email returns 200 with no reveal
-- [ ] T1.2.1.29: Test reset valid token returns 200
-- [ ] T1.2.1.30: Test reset expired token returns 400
-- [ ] T1.2.1.31: Create backend/src/__tests__/auth/user.test.ts
-- [ ] T1.2.1.32: Test GET /v1/users/me with valid token returns 200 and user data
-- [ ] T1.2.1.33: Test PATCH /v1/users/me updates display_name
-- [ ] T1.2.1.34: Test DELETE /v1/users/me with no active disputes returns 202
-- [ ] T1.2.1.35: Test DELETE /v1/users/me with active disputes returns 400
-- [ ] T1.2.1.36: Create backend/src/__tests__/auth/security.test.ts
-- [ ] T1.2.1.37: Test password hashing uses bcrypt cost factor 12
-- [ ] T1.2.1.38: Test JWT tokens are signed and verifiable
-- [ ] T1.2.1.39: Test access token expiry 15m and refresh expiry 7d
+- [x] T1.2.1.1: Create backend/src/__tests__/auth/register.test.ts
+- [x] T1.2.1.2: Test register valid input returns 201, creates user, queues email
+- [x] T1.2.1.3: Test register duplicate email returns 409
+- [x] T1.2.1.4: Test register weak password returns 400
+- [x] T1.2.1.5: Test register missing accept_terms returns 400
+- [x] T1.2.1.6: Test register display_name >100 chars returns 400
+- [x] T1.2.1.7: Test register invalid email format returns 400
+- [x] T1.2.1.8: Create backend/src/__tests__/auth/verify-email.test.ts
+- [x] T1.2.1.9: Test verify-email valid token returns 200
+- [x] T1.2.1.10: Test verify-email expired token returns 400
+- [x] T1.2.1.11: Test verify-email invalid token returns 400
+- [x] T1.2.1.12: Create backend/src/__tests__/auth/login.test.ts
+- [x] T1.2.1.13: Test login correct credentials returns 200 with tokens
+- [x] T1.2.1.14: Test login unverified email returns 403
+- [x] T1.2.1.15: Test login wrong password returns 401
+- [x] T1.2.1.16: Test login non-existent email returns 401
+- [x] T1.2.1.17: Test rate limit 6 attempts in 1 minute returns 429
+- [x] T1.2.1.18: Test rate limit headers present in every response
+- [x] T1.2.1.19: Create backend/src/__tests__/auth/refresh.test.ts
+- [x] T1.2.1.20: Test refresh valid token returns 200 and new tokens
+- [x] T1.2.1.21: Test refresh invalid token returns 401
+- [x] T1.2.1.22: Test refresh expired token returns 401
+- [x] T1.2.1.23: Create backend/src/__tests__/auth/logout.test.ts
+- [x] T1.2.1.24: Test logout invalidates refresh token
+- [x] T1.2.1.25: Test logout then refresh returns 401
+- [x] T1.2.1.26: Create backend/src/__tests__/auth/password-reset.test.ts
+- [x] T1.2.1.27: Test reset request existing email returns 200 and queues email
+- [x] T1.2.1.28: Test reset request non-existent email returns 200 with no reveal
+- [x] T1.2.1.29: Test reset valid token returns 200
+- [x] T1.2.1.30: Test reset expired token returns 400
+- [x] T1.2.1.31: Create backend/src/__tests__/auth/user.test.ts
+- [x] T1.2.1.32: Test GET /v1/users/me with valid token returns 200 and user data
+- [x] T1.2.1.33: Test PATCH /v1/users/me updates display_name
+- [x] T1.2.1.34: Test DELETE /v1/users/me with no active disputes returns 202
+- [x] T1.2.1.35: Test DELETE /v1/users/me with active disputes returns 400
+- [x] T1.2.1.36: Create backend/src/__tests__/auth/security.test.ts
+- [x] T1.2.1.37: Test password hashing uses bcrypt cost factor 12
+- [x] T1.2.1.38: Test JWT tokens are signed and verifiable
+- [x] T1.2.1.39: Test access token expiry 15m and refresh expiry 7d
 
 #### Backend Integration Tests
 
@@ -474,48 +474,48 @@ Environment: local PostgreSQL only. No AWS/cloud services. frontend/ + backend/ 
 
 #### Backend Unit Tests
 
-- [ ] T2.2.1.1: Create backend/src/__tests__/disputes/create.test.ts
-- [ ] T2.2.1.2: Test create valid returns 201 state draft party role initiator
-- [ ] T2.2.1.3: Test create without auth returns 401
-- [ ] T2.2.1.4: Test create invalid category returns 400
-- [ ] T2.2.1.5: Test create title too long returns 400
-- [ ] T2.2.1.6: Test create negative stakes returns 400
-- [ ] T2.2.1.7: Test create sets default price_usd 49.00
-- [ ] T2.2.1.8: Test create sets brief_status not_started
-- [ ] T2.2.1.9: Test create 100 requests in 1 hour rate limited
-- [ ] T2.2.1.10: Create backend/src/__tests__/disputes/state-machine.test.ts
-- [ ] T2.2.1.11: Test valid transition draft -> brief_submitted
-- [ ] T2.2.1.12: Test valid transition draft -> withdrawn
-- [ ] T2.2.1.13: Test valid transition brief_submitted -> payment_pending
-- [ ] T2.2.1.14: Test valid transition brief_submitted -> draft on withdraw
-- [ ] T2.2.1.15: Test valid transition payment_pending -> under_analysis
-- [ ] T2.2.1.16: Test valid transition payment_pending -> draft on failure
-- [ ] T2.2.1.17: Test valid transition payment_pending -> failed after retries
-- [ ] T2.2.1.18: Test valid transition under_analysis -> awaiting_aggregation
-- [ ] T2.2.1.19: Test valid transition under_analysis -> failed
-- [ ] T2.2.1.20: Test valid transition awaiting_aggregation -> completed
-- [ ] T2.2.1.21: Test invalid completed -> any state returns 409
-- [ ] T2.2.1.22: Test invalid failed -> any state returns 409
-- [ ] T2.2.1.23: Test invalid withdrawn -> any state returns 409
-- [ ] T2.2.1.24: Test invalid any state -> completed except awaiting_aggregation returns 409
-- [ ] T2.2.1.25: Create backend/src/__tests__/disputes/withdraw.test.ts
-- [ ] T2.2.1.26: Test withdraw draft returns 200 state withdrawn
-- [ ] T2.2.1.27: Test withdraw brief_submitted returns 200
-- [ ] T2.2.1.28: Test withdraw payment_pending returns 200
-- [ ] T2.2.1.29: Test withdraw under_analysis returns 400
-- [ ] T2.2.1.30: Test withdraw with succeeded payment creates refund record
-- [ ] T2.2.1.31: Test withdraw without payment creates no refund record
-- [ ] T2.2.1.32: Test withdraw refund amount matches original payment
-- [ ] T2.2.1.33: Create backend/src/__tests__/disputes/update.test.ts
-- [ ] T2.2.1.34: Test update in draft state returns 200
-- [ ] T2.2.1.35: Test update in non-draft state returns 409
-- [ ] T2.2.1.36: Test partial update title only
-- [ ] T2.2.1.37: Create backend/src/__tests__/disputes/get.test.ts
-- [ ] T2.2.1.38: Test getDisputes returns only users own disputes exclude deleted
-- [ ] T2.2.1.39: Test getDispute returns dispute with parties
-- [ ] T2.2.1.40: Test getDispute invalid ID returns 404
-- [ ] T2.2.1.41: Test getDispute other users dispute returns 404
-- [ ] T2.2.1.42: Test getDispute soft-deleted dispute returns 404
+- [x] T2.2.1.1: Create backend/src/__tests__/disputes/create.test.ts
+- [x] T2.2.1.2: Test create valid returns 201 state draft party role initiator
+- [x] T2.2.1.3: Test create without auth returns 401
+- [x] T2.2.1.4: Test create invalid category returns 400
+- [x] T2.2.1.5: Test create title too long returns 400
+- [x] T2.2.1.6: Test create negative stakes returns 400
+- [x] T2.2.1.7: Test create sets default price_usd 49.00
+- [x] T2.2.1.8: Test create sets brief_status not_started
+- [x] T2.2.1.9: Test create 100 requests in 1 hour rate limited
+- [x] T2.2.1.10: Create backend/src/__tests__/disputes/state-machine.test.ts
+- [x] T2.2.1.11: Test valid transition draft -> brief_submitted
+- [x] T2.2.1.12: Test valid transition draft -> withdrawn
+- [x] T2.2.1.13: Test valid transition brief_submitted -> payment_pending
+- [x] T2.2.1.14: Test valid transition brief_submitted -> draft on withdraw
+- [x] T2.2.1.15: Test valid transition payment_pending -> under_analysis
+- [x] T2.2.1.16: Test valid transition payment_pending -> draft on failure
+- [x] T2.2.1.17: Test valid transition payment_pending -> failed after retries
+- [x] T2.2.1.18: Test valid transition under_analysis -> awaiting_aggregation
+- [x] T2.2.1.19: Test valid transition under_analysis -> failed
+- [x] T2.2.1.20: Test valid transition awaiting_aggregation -> completed
+- [x] T2.2.1.21: Test invalid completed -> any state returns 409
+- [x] T2.2.1.22: Test invalid failed -> any state returns 409
+- [x] T2.2.1.23: Test invalid withdrawn -> any state returns 409
+- [x] T2.2.1.24: Test invalid any state -> completed except awaiting_aggregation returns 409
+- [x] T2.2.1.25: Create backend/src/__tests__/disputes/withdraw.test.ts
+- [x] T2.2.1.26: Test withdraw draft returns 200 state withdrawn
+- [x] T2.2.1.27: Test withdraw brief_submitted returns 200
+- [x] T2.2.1.28: Test withdraw payment_pending returns 200
+- [x] T2.2.1.29: Test withdraw under_analysis returns 400
+- [x] T2.2.1.30: Test withdraw with succeeded payment creates refund record
+- [x] T2.2.1.31: Test withdraw without payment creates no refund record
+- [x] T2.2.1.32: Test withdraw refund amount matches original payment
+- [x] T2.2.1.33: Create backend/src/__tests__/disputes/update.test.ts
+- [x] T2.2.1.34: Test update in draft state returns 200
+- [x] T2.2.1.35: Test update in non-draft state returns 409
+- [x] T2.2.1.36: Test partial update title only
+- [x] T2.2.1.37: Create backend/src/__tests__/disputes/get.test.ts
+- [x] T2.2.1.38: Test getDisputes returns only users own disputes exclude deleted
+- [x] T2.2.1.39: Test getDispute returns dispute with parties
+- [x] T2.2.1.40: Test getDispute invalid ID returns 404
+- [x] T2.2.1.41: Test getDispute other users dispute returns 404
+- [x] T2.2.1.42: Test getDispute soft-deleted dispute returns 404
 
 #### Backend Integration Tests
 
@@ -653,15 +653,15 @@ Environment: local PostgreSQL only. No AWS/cloud services. frontend/ + backend/ 
 ### F3 Stage 3.1: Feature Implementation
 
 #### Database Schema — Briefs
-- [ ] T3_Brief.001: Create briefs table migration in backend/prisma/migrations/
-- [ ] T3_Brief.002: Add briefs columns: id, party_id, dispute_id, encrypted_content BYTEA, content_encryption_key_id, word_count, supporting_document_ids, status, timestamps, seal_hash, retention_expires_at
-- [ ] T3_Brief.003: Add UNIQUE constraint on briefs(party_id)
-- [ ] T3_Brief.004: Add indexes: briefs(dispute_id), briefs(status), partial index on retention_expires_at
-- [ ] T3_Brief.005: Run prisma migrate dev --name add-briefs
-- [ ] T3_Brief.006: Update Prisma schema with Brief model and relations
-- [ ] T3_Brief.007: Update backend/src/types/schemas.ts with BriefSections Zod schema (5 required sections)
-- [ ] T3_Brief.008: Update OpenAPI spec with brief endpoints
-- [ ] T3_Brief.009: Generate frontend types from OpenAPI
+- [x] T3_Brief.001: Create briefs table migration in backend/prisma/migrations/
+- [x] T3_Brief.002: Add briefs columns: id, party_id, dispute_id, encrypted_content BYTEA, content_encryption_key_id, word_count, supporting_document_ids, status, timestamps, seal_hash, retention_expires_at
+- [x] T3_Brief.003: Add UNIQUE constraint on briefs(party_id)
+- [x] T3_Brief.004: Add indexes: briefs(dispute_id), briefs(status), partial index on retention_expires_at
+- [x] T3_Brief.005: Run prisma migrate dev --name add-briefs
+- [x] T3_Brief.006: Update Prisma schema with Brief model and relations
+- [x] T3_Brief.007: Update backend/src/types/schemas.ts with BriefSections Zod schema (5 required sections)
+- [x] T3_Brief.008: Update OpenAPI spec with brief endpoints
+- [x] T3_Brief.009: Generate frontend types from OpenAPI
 
 #### Backend Encryption Utilities
 - [x] T3_Brief.010: Create backend/src/utils/crypto.ts AES-256-GCM encrypt/decrypt helpers
@@ -697,74 +697,74 @@ Environment: local PostgreSQL only. No AWS/cloud services. frontend/ + backend/ 
 - [x] T3_Brief.038: Implement brief status state machine: not_started -> in_progress -> submitted -> sealed
 
 #### Backend Brief Routes
-- [ ] T3_Brief.039: Create backend/src/routes/v1/briefs.routes.ts
-- [ ] T3_Brief.040: Implement PUT /v1/disputes/:dispute_id/parties/:party_id/brief/draft
-- [ ] T3_Brief.041: Add auth middleware: user must be authenticated and email_verified
-- [ ] T3_Brief.042: Add party ownership check: user must be member of the party
-- [ ] T3_Brief.043: Add Zod validation: partial sections allowed, max 5000 words per section
-- [ ] T3_Brief.044: Implement POST /v1/disputes/:dispute_id/parties/:party_id/brief/submit
-- [ ] T3_Brief.045: Add Zod validation: all 5 sections required, word count enforced
-- [ ] T3_Brief.046: Add rate limiting: max 5 submit attempts per 10 minutes per user
-- [ ] T3_Brief.047: Implement GET /v1/disputes/:dispute_id/parties/:party_id/brief
-- [ ] T3_Brief.048: Return 404 if brief not found or user not authorized
-- [ ] T3_Brief.049: Return 403 if brief is sealed and user tries to edit
-- [ ] T3_Brief.050: Wire brief routes into main Express app
-- [ ] T3_Brief.051: Add brief endpoints to OpenAPI spec with request/response schemas
-- [ ] T3_Brief.052: Generate frontend types from OpenAPI
+- [x] T3_Brief.039: Create backend/src/routes/v1/briefs.routes.ts
+- [x] T3_Brief.040: Implement PUT /v1/disputes/:dispute_id/parties/:party_id/brief/draft
+- [x] T3_Brief.041: Add auth middleware: user must be authenticated and email_verified
+- [x] T3_Brief.042: Add party ownership check: user must be member of the party
+- [x] T3_Brief.043: Add Zod validation: partial sections allowed, max 5000 words per section
+- [x] T3_Brief.044: Implement POST /v1/disputes/:dispute_id/parties/:party_id/brief/submit
+- [x] T3_Brief.045: Add Zod validation: all 5 sections required, word count enforced
+- [x] T3_Brief.046: Add rate limiting: max 5 submit attempts per 10 minutes per user
+- [x] T3_Brief.047: Implement GET /v1/disputes/:dispute_id/parties/:party_id/brief
+- [x] T3_Brief.048: Return 404 if brief not found or user not authorized
+- [x] T3_Brief.049: Return 403 if brief is sealed and user tries to edit
+- [x] T3_Brief.050: Wire brief routes into main Express app
+- [x] T3_Brief.051: Add brief endpoints to OpenAPI spec with request/response schemas
+- [x] T3_Brief.052: Generate frontend types from OpenAPI
 
 #### Frontend Brief Implementation
-- [ ] T3_Brief.053: Create frontend/src/app/(dashboard)/disputes/[id]/brief/page.tsx
-- [ ] T3_Brief.054: Build 5-section form component: factual_background, my_position, supporting_arguments, acknowledgment_of_opposing, desired_resolution
-- [ ] T3_Brief.055: Render each section as separate textarea with label and word count
-- [ ] T3_Brief.056: Add real-time word count display per section and total
-- [ ] T3_Brief.057: Add visual warning indicator at 4500 words (approaching 5000 cap)
-- [ ] T3_Brief.058: Add hard stop at 5000 words — prevent further input, show error
-- [ ] T3_Brief.059: Add auto-save draft every 30 seconds with debounce
-- [ ] T3_Brief.060: Add "Save Draft" manual button with loading state
-- [ ] T3_Brief.061: Show last saved timestamp after each auto-save
-- [ ] T3_Brief.062: Add "Submit Brief" button — disabled until all 5 sections have content
-- [ ] T3_Brief.063: Add confirmation dialog before submit: "This cannot be edited after submission."
-- [ ] T3_Brief.064: Add content moderation warning before submit
-- [ ] T3_Brief.065: Implement submit API call with loading spinner on button
-- [ ] T3_Brief.066: Show success state after submit: "Brief submitted. Payment required."
-- [ ] T3_Brief.067: Disable all textareas and hide Save/Submit buttons after submit (immutability)
-- [ ] T3_Brief.068: Add brief status badge: draft (gray), submitted (blue), sealed (green)
-- [ ] T3_Brief.069: Handle concurrent saves: show "Saving...", resolve with last server response
-- [ ] T3_Brief.070: Add error display for API failures with retry button
-- [ ] T3_Brief.071: Add success toast notifications for save and submit
-- [ ] T3_Brief.072: Navigate to payment page after successful submit
+- [x] T3_Brief.053: Create frontend/src/app/(dashboard)/disputes/[id]/brief/page.tsx
+- [x] T3_Brief.054: Build 5-section form component: factual_background, my_position, supporting_arguments, acknowledgment_of_opposing, desired_resolution
+- [x] T3_Brief.055: Render each section as separate textarea with label and word count
+- [x] T3_Brief.056: Add real-time word count display per section and total
+- [x] T3_Brief.057: Add visual warning indicator at 4500 words (approaching 5000 cap)
+- [x] T3_Brief.058: Add hard stop at 5000 words — prevent further input, show error
+- [x] T3_Brief.059: Add auto-save draft every 30 seconds with debounce
+- [x] T3_Brief.060: Add "Save Draft" manual button with loading state
+- [x] T3_Brief.061: Show last saved timestamp after each auto-save
+- [x] T3_Brief.062: Add "Submit Brief" button — disabled until all 5 sections have content
+- [x] T3_Brief.063: Add confirmation dialog before submit: "This cannot be edited after submission."
+- [x] T3_Brief.064: Add content moderation warning before submit
+- [x] T3_Brief.065: Implement submit API call with loading spinner on button
+- [x] T3_Brief.066: Show success state after submit: "Brief submitted. Payment required."
+- [x] T3_Brief.067: Disable all textareas and hide Save/Submit buttons after submit (immutability)
+- [x] T3_Brief.068: Add brief status badge: draft (gray), submitted (blue), sealed (green)
+- [x] T3_Brief.069: Handle concurrent saves: show "Saving...", resolve with last server response
+- [x] T3_Brief.070: Add error display for API failures with retry button
+- [x] T3_Brief.071: Add success toast notifications for save and submit
+- [x] T3_Brief.072: Navigate to payment page after successful submit
 
 ### F3 Stage 3.2: Comprehensive Testing
 
 #### Backend Unit Tests
-- [ ] T3_Brief.073: Create backend/src/__tests__/briefs/save-draft.test.ts
-- [ ] T3_Brief.074: Test save draft with valid partial data returns 200 status=draft
-- [ ] T3_Brief.075: Test save draft updates existing draft if already exists
-- [ ] T3_Brief.076: Test save draft for non-existent dispute returns 404
-- [ ] T3_Brief.077: Test save draft for non-party member returns 403
-- [ ] T3_Brief.078: Test save draft for non-draft dispute state returns 409
-- [ ] T3_Brief.079: Create backend/src/__tests__/briefs/submit.test.ts
-- [ ] T3_Brief.080: Test submit with all 5 sections returns 200 status=submitted
-- [ ] T3_Brief.081: Test submit with empty section returns 400
-- [ ] T3_Brief.082: Test submit with exactly 5000 words returns 200
-- [ ] T3_Brief.083: Test submit with 5001 words returns 400
-- [ ] T3_Brief.084: Test submit on draft dispute returns 200 state becomes brief_submitted
-- [ ] T3_Brief.085: Test submit on non-draft dispute returns 409
-- [ ] T3_Brief.086: Test submit sets seal_hash and makes content immutable
-- [ ] T3_Brief.087: Test edit after submit returns 403
-- [ ] T3_Brief.088: Test word count calculated correctly across all 5 sections
-- [ ] T3_Brief.089: Create backend/src/__tests__/briefs/encryption.test.ts
-- [ ] T3_Brief.090: Test encryptBriefContent produces non-readable ciphertext
-- [ ] T3_Brief.091: Test decryptBriefContent recovers original plaintext exactly
-- [ ] T3_Brief.092: Test decryption fails with wrong key (throws, no plaintext leak)
-- [ ] T3_Brief.093: Test encrypt-then-decrypt roundtrip preserves content
-- [ ] T3_Brief.094: Create backend/src/__tests__/briefs/moderation.test.ts
-- [ ] T3_Brief.095: Test moderation blocks illegal activity returns 400
-- [ ] T3_Brief.096: Test moderation blocks harassment returns 400
-- [ ] T3_Brief.097: Test moderation blocks threats returns 400
-- [ ] T3_Brief.098: Test moderation blocks sexual content returns 400
-- [ ] T3_Brief.099: Test moderation blocks PII of others returns 400
-- [ ] T3_Brief.100: Test moderation passes allowed dispute content returns 200
+- [x] T3_Brief.073: Create backend/src/__tests__/briefs/save-draft.test.ts
+- [x] T3_Brief.074: Test save draft with valid partial data returns 200 status=draft
+- [x] T3_Brief.075: Test save draft updates existing draft if already exists
+- [x] T3_Brief.076: Test save draft for non-existent dispute returns 404
+- [x] T3_Brief.077: Test save draft for non-party member returns 403
+- [x] T3_Brief.078: Test save draft for non-draft dispute state returns 409
+- [x] T3_Brief.079: Create backend/src/__tests__/briefs/submit.test.ts
+- [x] T3_Brief.080: Test submit with all 5 sections returns 200 status=submitted
+- [x] T3_Brief.081: Test submit with empty section returns 400
+- [x] T3_Brief.082: Test submit with exactly 5000 words returns 200
+- [x] T3_Brief.083: Test submit with 5001 words returns 400
+- [x] T3_Brief.084: Test submit on draft dispute returns 200 state becomes brief_submitted
+- [x] T3_Brief.085: Test submit on non-draft dispute returns 409
+- [x] T3_Brief.086: Test submit sets seal_hash and makes content immutable
+- [x] T3_Brief.087: Test edit after submit returns 403
+- [x] T3_Brief.088: Test word count calculated correctly across all 5 sections
+- [x] T3_Brief.089: Create backend/src/__tests__/briefs/encryption.test.ts
+- [x] T3_Brief.090: Test encryptBriefContent produces non-readable ciphertext
+- [x] T3_Brief.091: Test decryptBriefContent recovers original plaintext exactly
+- [x] T3_Brief.092: Test decryption fails with wrong key (throws, no plaintext leak)
+- [x] T3_Brief.093: Test encrypt-then-decrypt roundtrip preserves content
+- [x] T3_Brief.094: Create backend/src/__tests__/briefs/moderation.test.ts
+- [x] T3_Brief.095: Test moderation blocks illegal activity returns 400
+- [x] T3_Brief.096: Test moderation blocks harassment returns 400
+- [x] T3_Brief.097: Test moderation blocks threats returns 400
+- [x] T3_Brief.098: Test moderation blocks sexual content returns 400
+- [x] T3_Brief.099: Test moderation blocks PII of others returns 400
+- [x] T3_Brief.100: Test moderation passes allowed dispute content returns 200
 
 #### Backend Integration Tests
 - [ ] T3_Brief.101: Create backend/src/__integration__/briefs/brief-flow.integration.test.ts
@@ -783,19 +783,19 @@ Environment: local PostgreSQL only. No AWS/cloud services. frontend/ + backend/ 
 - [ ] T3_Brief.114: Test brief deleted after retention period expires
 
 #### Frontend Tests
-- [ ] T3_Brief.115: Create frontend/src/__tests__/components/BriefForm.test.tsx
-- [ ] T3_Brief.116: Test BriefForm renders all 5 sections with textareas
-- [ ] T3_Brief.117: Test validates all 5 sections required on submit
-- [ ] T3_Brief.118: Test allows partial fill on draft save
-- [ ] T3_Brief.119: Test word count updates correctly per section and total
-- [ ] T3_Brief.120: Test shows warning at 4500 words
-- [ ] T3_Brief.121: Test hard blocks input at 5000 words
-- [ ] T3_Brief.122: Test auto-save triggers every 30 seconds
-- [ ] T3_Brief.123: Test submit button disabled until all sections filled
-- [ ] T3_Brief.124: Test submit shows loading state
-- [ ] T3_Brief.125: Test disables all inputs after submit
-- [ ] T3_Brief.126: Test shows error on API failure with retry
-- [ ] T3_Brief.127: Test shows success message after submit
+- [x] T3_Brief.115: Create frontend/src/__tests__/components/BriefForm.test.tsx
+- [x] T3_Brief.116: Test BriefForm renders all 5 sections with textareas
+- [x] T3_Brief.117: Test validates all 5 sections required on submit
+- [x] T3_Brief.118: Test allows partial fill on draft save
+- [x] T3_Brief.119: Test word count updates correctly per section and total
+- [x] T3_Brief.120: Test shows warning at 4500 words
+- [x] T3_Brief.121: Test hard blocks input at 5000 words
+- [x] T3_Brief.122: Test auto-save triggers every 30 seconds
+- [x] T3_Brief.123: Test submit button disabled until all sections filled
+- [x] T3_Brief.124: Test submit shows loading state
+- [x] T3_Brief.125: Test disables all inputs after submit
+- [x] T3_Brief.126: Test shows error on API failure with retry
+- [x] T3_Brief.127: Test shows success message after submit
 - [ ] T3_Brief.128: Create frontend/tests/e2e/brief/brief-flow.spec.ts
 - [ ] T3_Brief.129: Test E2E: create dispute -> open brief -> fill sections -> save draft -> submit -> payment
 - [ ] T3_Brief.130: Test E2E word count enforcement
@@ -888,74 +888,74 @@ Environment: local PostgreSQL only. No AWS/cloud services. frontend/ + backend/ 
 
 ### F4 Stage 3.1: Feature Implementation
 
-- [ ] T3.1.1.1: Create payments table migration in backend/prisma/migrations/
-- [ ] T3.1.1.2: Add payments columns: id, dispute_id, user_id, amount_usd, currency, processor, processor_payment_id, status, refunded_amount_usd, refund_reason, refunded_at, idempotency_key, created_at, updated_at, completed_at
-- [ ] T3.1.1.3: Add index on payments(dispute_id)
-- [ ] T3.1.1.4: Add index on payments(user_id)
-- [ ] T3.1.1.5: Add unique constraint on payments(processor_payment_id)
-- [ ] T3.1.1.6: Add unique constraint on payments(idempotency_key)
-- [ ] T3.1.1.7: Run prisma migrate dev --name add-payments
-- [ ] T3.1.1.8: Update backend/src/types/schemas.ts with payment Zod schemas
-- [ ] T3.1.1.9: Update OpenAPI spec with payment endpoints
-- [ ] T3.1.1.10: Generate frontend types from OpenAPI
-- [ ] T3.1.1.11: Create backend/src/services/payments/index.ts
-- [ ] T3.1.1.12: Implement createPaymentIntent validate dispute in payment_pending state
-- [ ] T3.1.1.13: Implement createPaymentIntent call Stripe paymentIntents create for $49 USD
-- [ ] T3.1.1.14: Implement createPaymentIntent store idempotency key with 24h TTL
-- [ ] T3.1.1.15: Implement confirmPayment verify idempotency key then update state
-- [ ] T3.1.1.16: Implement confirmPayment update dispute state to under_analysis
-- [ ] T3.1.1.17: Implement confirmPayment trigger evaluation job
-- [ ] T3.1.1.18: Implement requestRefund validate dispute eligible for refund
-- [ ] T3.1.1.19: Create backend/src/routes/v1/payments.routes.ts
-- [ ] T3.1.1.20: Implement GET /v1/disputes/:dispute_id/payment-intent endpoint
-- [ ] T3.1.1.21: Implement POST /v1/disputes/:dispute_id/payment/confirm endpoint
-- [ ] T3.1.1.22: Implement POST /v1/disputes/:dispute_id/refund-request endpoint
-- [ ] T3.1.1.23: Implement GET /v1/users/me/payments endpoint
-- [ ] T3.1.1.24: Create Stripe webhook handler POST /v1/webhooks/stripe
-- [ ] T3.1.1.25: Implement Stripe webhook signature verification with STRIPE_WEBHOOK_SECRET
-- [ ] T3.1.1.26: Handle payment_intent.succeeded: update state and trigger evaluation
-- [ ] T3.1.1.27: Handle payment_intent.failed: revert to draft or payment_pending
-- [ ] T3.1.1.28: Create backend/src/jobs/email.worker.ts or queue consumer for async emails
-- [ ] T3.1.1.29: Create email templates payment-success.ts, payment-failed.ts
-- [ ] T3.1.1.30: Create frontend src/app/(dashboard)/disputes/[id]/payment/page.tsx
-- [ ] T3.1.1.31: Create Stripe Elements payment form in frontend
-- [ ] T3.1.1.32: Implement Stripe payment confirmation flow
-- [ ] T3.1.1.33: Add payment success and error states
-- [ ] T3.1.1.34: Add retry payment button for failed payments
-- [ ] T3.1.1.35: Add payment history to user dashboard
+- [x] T3.1.1.1: Create payments table migration in backend/prisma/migrations/
+- [x] T3.1.1.2: Add payments columns: id, dispute_id, user_id, amount_usd, currency, processor, processor_payment_id, status, refunded_amount_usd, refund_reason, refunded_at, idempotency_key, created_at, updated_at, completed_at
+- [x] T3.1.1.3: Add index on payments(dispute_id)
+- [x] T3.1.1.4: Add index on payments(user_id)
+- [x] T3.1.1.5: Add unique constraint on payments(processor_payment_id)
+- [x] T3.1.1.6: Add unique constraint on payments(idempotency_key)
+- [x] T3.1.1.7: Run prisma migrate dev --name add-payments
+- [x] T3.1.1.8: Update backend/src/types/schemas.ts with payment Zod schemas
+- [x] T3.1.1.9: Update OpenAPI spec with payment endpoints
+- [x] T3.1.1.10: Generate frontend types from OpenAPI
+- [x] T3.1.1.11: Create backend/src/services/payments/index.ts
+- [x] T3.1.1.12: Implement createPaymentIntent validate dispute in payment_pending state
+- [x] T3.1.1.13: Implement createPaymentIntent call Stripe paymentIntents create for $49 USD
+- [x] T3.1.1.14: Implement createPaymentIntent store idempotency key with 24h TTL
+- [x] T3.1.1.15: Implement confirmPayment verify idempotency key then update state
+- [x] T3.1.1.16: Implement confirmPayment update dispute state to under_analysis
+- [x] T3.1.1.17: Implement confirmPayment trigger evaluation job
+- [x] T3.1.1.18: Implement requestRefund validate dispute eligible for refund
+- [x] T3.1.1.19: Create backend/src/routes/v1/payments.routes.ts
+- [x] T3.1.1.20: Implement GET /v1/disputes/:dispute_id/payment-intent endpoint
+- [x] T3.1.1.21: Implement POST /v1/disputes/:dispute_id/payment/confirm endpoint
+- [x] T3.1.1.22: Implement POST /v1/disputes/:dispute_id/refund-request endpoint
+- [x] T3.1.1.23: Implement GET /v1/users/me/payments endpoint
+- [x] T3.1.1.24: Create Stripe webhook handler POST /v1/webhooks/stripe
+- [x] T3.1.1.25: Implement Stripe webhook signature verification with STRIPE_WEBHOOK_SECRET
+- [x] T3.1.1.26: Handle payment_intent.succeeded: update state and trigger evaluation
+- [x] T3.1.1.27: Handle payment_intent.failed: revert to draft or payment_pending
+- [x] T3.1.1.28: Create backend/src/jobs/email.worker.ts or queue consumer for async emails
+- [x] T3.1.1.29: Create email templates payment-success.ts, payment-failed.ts
+- [x] T3.1.1.30: Create frontend src/app/(dashboard)/disputes/[id]/payment/page.tsx
+- [x] T3.1.1.31: Create Stripe Elements payment form in frontend
+- [x] T3.1.1.32: Implement Stripe payment confirmation flow
+- [x] T3.1.1.33: Add payment success and error states
+- [x] T3.1.1.34: Add retry payment button for failed payments
+- [x] T3.1.1.35: Add payment history to user dashboard
 
 ### F4 Stage 3.2: Comprehensive Testing
 
-- [ ] T3.2.1.1: Create backend/src/__tests__/payments/intent.test.ts
-- [ ] T3.2.1.2: Test create intent for payment_pending dispute returns 200
-- [ ] T3.2.1.3: Test create intent for non-payment_pending returns 400
-- [ ] T3.2.1.4: Test create intent duplicate idempotency key returns original response
-- [ ] T3.2.1.5: Test create intent amount always 49.00 USD
-- [ ] T3.2.1.6: Create backend/src/__tests__/payments/confirm.test.ts
-- [ ] T3.2.1.7: Test confirm valid payment returns 200 state under_analysis
-- [ ] T3.2.1.8: Test confirm invalid intent returns 400
-- [ ] T3.2.1.9: Test confirm duplicate idempotency returns original
-- [ ] T3.2.1.10: Create backend/src/__tests__/payments/refund.test.ts
-- [ ] T3.2.1.11: Test refund request eligible dispute returns 202
-- [ ] T3.2.1.12: Test refund request ineligible dispute returns 400
-- [ ] T3.2.1.13: Create backend/src/__tests__/payments/webhook.test.ts
-- [ ] T3.2.1.14: Test Stripe webhook signature verification rejects bad sig
-- [ ] T3.2.1.15: Test payment_intent.succeeded updates state and triggers evaluation
-- [ ] T3.2.1.16: Test payment_intent.failed reverts to draft
-- [ ] T3.2.1.17: Create backend/src/__tests__/payments/integration.test.ts
-- [ ] T3.2.1.18: Test full payment flow create intent -> confirm -> state change
-- [ ] T3.2.1.19: Test webhook failure fallback polling every 30s for 5 min
-- [ ] T3.2.1.20: Create backend/src/__tests__/payments/idempotency.test.ts
-- [ ] T3.2.1.21: Test idempotency keys stored with 24h TTL
-- [ ] T3.2.1.22: Test repeated request with same key returns original
-- [ ] T3.2.1.23: Test idempotency key expires after 24h
-- [ ] T3.2.1.24: Test concurrent payment confirmations handled safely
-- [ ] T3.2.1.25: Create frontend/tests/e2e/payments/payment-flow.spec.ts
-- [ ] T3.2.1.26: Test user can pay for analysis with Stripe test card
-- [ ] T3.2.1.27: Test payment success redirects to analysis-in-progress
-- [ ] T3.2.1.28: Test payment failure shows error and retry option
-- [ ] T3.2.1.29: Run all payment tests and verify pass
-- [ ] T3.2.1.30: Document payment test results
+- [x] T3.2.1.1: Create backend/src/__tests__/payments/intent.test.ts
+- [x] T3.2.1.2: Test create intent for payment_pending dispute returns 200
+- [x] T3.2.1.3: Test create intent for non-payment_pending returns 400
+- [x] T3.2.1.4: Test create intent duplicate idempotency key returns original response
+- [x] T3.2.1.5: Test create intent amount always 49.00 USD
+- [x] T3.2.1.6: Create backend/src/__tests__/payments/confirm.test.ts
+- [x] T3.2.1.7: Test confirm valid payment returns 200 state under_analysis
+- [x] T3.2.1.8: Test confirm invalid intent returns 400
+- [x] T3.2.1.9: Test confirm duplicate idempotency returns original
+- [x] T3.2.1.10: Create backend/src/__tests__/payments/refund.test.ts
+- [x] T3.2.1.11: Test refund request eligible dispute returns 202
+- [x] T3.2.1.12: Test refund request ineligible dispute returns 400
+- [x] T3.2.1.13: Create backend/src/__tests__/payments/webhook.test.ts
+- [x] T3.2.1.14: Test Stripe webhook signature verification rejects bad sig
+- [x] T3.2.1.15: Test payment_intent.succeeded updates state and triggers evaluation
+- [x] T3.2.1.16: Test payment_intent.failed reverts to draft
+- [x] T3.2.1.17: Create backend/src/__tests__/payments/integration.test.ts
+- [x] T3.2.1.18: Test full payment flow create intent -> confirm -> state change
+- [x] T3.2.1.19: Test webhook failure fallback polling every 30s for 5 min
+- [x] T3.2.1.20: Create backend/src/__tests__/payments/idempotency.test.ts
+- [x] T3.2.1.21: Test idempotency keys stored with 24h TTL
+- [x] T3.2.1.22: Test repeated request with same key returns original
+- [x] T3.2.1.23: Test idempotency key expires after 24h
+- [x] T3.2.1.24: Test concurrent payment confirmations handled safely
+- [x] T3.2.1.25: Create frontend/tests/e2e/payments/payment-flow.spec.ts
+- [x] T3.2.1.26: Test user can pay for analysis with Stripe test card
+- [x] T3.2.1.27: Test payment success redirects to analysis-in-progress
+- [x] T3.2.1.28: Test payment failure shows error and retry option
+- [x] T3.2.1.29: Run all payment tests and verify pass
+- [x] T3.2.1.30: Document payment test results
 
 ### F4 Stage 3.3: Optimization
 
@@ -1031,81 +1031,81 @@ Environment: local PostgreSQL only. No AWS/cloud services. frontend/ + backend/ 
 - [x] T4.1.1.13: Configure providers from env GROQ_API_KEY and GEMINI_API_KEY
 - [x] T4.1.1.14: Create backend/src/prompts/eval-v3.2.ts with immutable EVAL_PROMPT_V3_2 string
 - [x] T4.1.1.15: Create backend/src/prompts/agg-v2.1.ts with immutable AGG_PROMPT_V2_1 string
-- [ ] T4.1.1.16: Create evaluator_outputs table migration in backend/prisma/migrations/
-- [ ] T4.1.1.17: Add evaluator_outputs columns with all required fields
-- [ ] T4.1.1.18: Add index on evaluator_outputs(dispute_id)
-- [ ] T4.1.1.19: Run prisma migrate dev --name add-evaluator-outputs
-- [ ] T4.1.1.20: Create backend/src/services/evaluation/index.ts
-- [ ] T4.1.1.21: Implement createEvaluationJob dispute and brief validation
-- [ ] T4.1.1.22: Implement dispatchEvaluators with Promise.allSettled parallel dispatch
-- [ ] T4.1.1.23: Implement dispatchEvaluators retry loop up to 3 attempts 1s then 2s backoff
-- [ ] T4.1.1.24: Implement dispatchEvaluators store output in evaluator_outputs table
-- [ ] T4.1.1.25: Implement dispatchEvaluators record prompt_version cost duration attempt_number
-- [ ] T4.1.1.26: Implement dispatchEvaluators minimum 3 successful rule
-- [ ] T4.1.1.27: Implement dispatchEvaluators auto-refund when fewer than 3 succeed
-- [ ] T4.1.1.28: Implement dispatchEvaluators update dispute state to awaiting_aggregation or failed
-- [ ] T4.1.1.29: Implement decodeContent AES-256-GCM decrypt helper for brief content
-- [ ] T4.1.1.30: Implement input sanitization before sending brief to evaluators
-- [ ] T4.1.1.31: Implement output validation detect prompt injection patterns
-- [ ] T4.1.1.32: Create backend/src/jobs/evaluation.worker.ts BullMQ worker
-- [ ] T4.1.1.33: Create backend/src/jobs/queues.ts queue definitions
-- [ ] T4.1.1.34: Create backend/src/routes/v1/evaluation.routes.ts
-- [ ] T4.1.1.35: Implement POST /v1/disputes/:dispute_id/evaluate endpoint
-- [ ] T4.1.1.36: Implement GET /v1/disputes/:dispute_id/evaluation/status endpoint
-- [ ] T4.1.1.37: Add evaluation endpoints to OpenAPI spec
-- [ ] T4.1.1.38: Generate frontend types from OpenAPI
-- [ ] T4.1.1.39: Create frontend src/app/(dashboard)/disputes/[id]/analysis/page.tsx
-- [ ] T4.1.1.40: Implement analysis status display with SSE or polling
-- [ ] T4.1.1.41: Add evaluator progress indicators
-- [ ] T4.1.1.42: Add evaluation complete notification state
+- [x] T4.1.1.16: Create evaluator_outputs table migration in backend/prisma/migrations/
+- [x] T4.1.1.17: Add evaluator_outputs columns with all required fields
+- [x] T4.1.1.18: Add index on evaluator_outputs(dispute_id)
+- [x] T4.1.1.19: Run prisma migrate dev --name add-evaluator-outputs
+- [x] T4.1.1.20: Create backend/src/services/evaluation/index.ts
+- [x] T4.1.1.21: Implement createEvaluationJob dispute and brief validation
+- [x] T4.1.1.22: Implement dispatchEvaluators with Promise.allSettled parallel dispatch
+- [x] T4.1.1.23: Implement dispatchEvaluators retry loop up to 3 attempts 1s then 2s backoff
+- [x] T4.1.1.24: Implement dispatchEvaluators store output in evaluator_outputs table
+- [x] T4.1.1.25: Implement dispatchEvaluators record prompt_version cost duration attempt_number
+- [x] T4.1.1.26: Implement dispatchEvaluators minimum 3 successful rule
+- [x] T4.1.1.27: Implement dispatchEvaluators auto-refund when fewer than 3 succeed
+- [x] T4.1.1.28: Implement dispatchEvaluators update dispute state to awaiting_aggregation or failed
+- [x] T4.1.1.29: Implement decodeContent AES-256-GCM decrypt helper for brief content
+- [x] T4.1.1.30: Implement input sanitization before sending brief to evaluators
+- [x] T4.1.1.31: Implement output validation detect prompt injection patterns
+- [x] T4.1.1.32: Create backend/src/jobs/evaluation.worker.ts BullMQ worker
+- [x] T4.1.1.33: Create backend/src/jobs/queues.ts queue definitions
+- [x] T4.1.1.34: Create backend/src/routes/v1/evaluation.routes.ts
+- [x] T4.1.1.35: Implement POST /v1/disputes/:dispute_id/evaluate endpoint
+- [x] T4.1.1.36: Implement GET /v1/disputes/:dispute_id/evaluation/status endpoint
+- [x] T4.1.1.37: Add evaluation endpoints to OpenAPI spec
+- [x] T4.1.1.38: Generate frontend types from OpenAPI
+- [x] T4.1.1.39: Create frontend src/app/(dashboard)/disputes/[id]/analysis/page.tsx
+- [x] T4.1.1.40: Implement analysis status display with SSE or polling
+- [x] T4.1.1.41: Add evaluator progress indicators
+- [x] T4.1.1.42: Add evaluation complete notification state
 
 ### F5 Stage 4.2: Comprehensive Testing
 
-- [ ] T4.2.1.1: Create backend/src/__tests__/providers/groq.test.ts
-- [ ] T4.2.1.2: Test GroqProvider generateCompletion returns completion
-- [ ] T4.2.1.3: Test GroqProvider healthCheck returns healthy true on valid API
-- [ ] T4.2.1.4: Test GroqProvider healthCheck returns healthy false on invalid API
-- [ ] T4.2.1.5: Test GroqProvider data residency checks
-- [ ] T4.2.1.6: Test GroqProvider hasNoTrainingGuarantee returns true
-- [ ] T4.2.1.7: Create backend/src/__tests__/providers/gemini.test.ts
-- [ ] T4.2.1.8: Test GeminiProvider generateCompletion returns completion
-- [ ] T4.2.1.9: Test GeminiProvider healthCheck latency tracking
-- [ ] T4.2.1.10: Create backend/src/__tests__/providers/registry.test.ts
-- [ ] T4.2.1.11: Test ProviderRegistry register and all return providers
-- [ ] T4.2.1.12: Create backend/src/__tests__/providers/circuit-breaker.test.ts
-- [ ] T4.2.1.13: Test CircuitBreaker opens on consecutive failures
-- [ ] T4.2.1.14: Test CircuitBreaker half-open after timeout
-- [ ] T4.2.1.15: Test CircuitBreaker closes on success
-- [ ] T4.2.1.16: Create backend/src/__tests__/providers/retry.test.ts
-- [ ] T4.2.1.17: Test withRetry succeeds on first attempt
-- [ ] T4.2.1.18: Test withRetry retries on transient failure
-- [ ] T4.2.1.19: Test withRetry throws after max attempts
-- [ ] T4.2.1.20: Create backend/src/__tests__/evaluation/dispatch.test.ts
-- [ ] T4.2.1.21: Test dispatchEvaluators calls all 3 providers in parallel
-- [ ] T4.2.1.22: Test dispatchEvaluators stores outputs in database
-- [ ] T4.2.1.23: Test dispatchEvaluators records prompt_version cost duration
-- [ ] T4.2.1.24: Test dispatchEvaluators minimum 3 success moves to awaiting_aggregation
-- [ ] T4.2.1.25: Test dispatchEvaluators 1 failure after retries auto-refund
-- [ ] T4.2.1.26: Test dispatchEvaluators all 3 failures state failed auto-refund
-- [ ] T4.2.1.27: Test dispatchEvaluators prompt injection output flagged parse_success false
-- [ ] T4.2.1.28: Test dispatchEvaluators timeout >60s marked failed and retried
-- [ ] T4.2.1.29: Test dispatchEvaluators attempt_number increments on retry
-- [ ] T4.2.1.30: Test input sanitization blocks prompt injection patterns
-- [ ] T4.2.1.31: Create backend/src/__tests__/evaluation/integration.test.ts
-- [ ] T4.2.1.32: Test full evaluation flow with mock providers
-- [ ] T4.2.1.33: Test full evaluation flow with real Groq API
-- [ ] T4.2.1.34: Test full evaluation flow with real Gemini API
-- [ ] T4.2.1.35: Test cost tracking recorded per evaluator
-- [ ] T4.2.1.36: Test cost threshold alert triggered at $15/dispute
-- [ ] T4.2.1.37: Create backend/src/__tests__/evaluation/state-machine.test.ts
-- [ ] T4.2.1.38: Test state transition under_analysis -> awaiting_aggregation
-- [ ] T4.2.1.39: Test state transition under_analysis -> failed on insufficient successes
-- [ ] T4.2.1.40: Create frontend/tests/e2e/evaluation/analysis-flow.spec.ts
-- [ ] T4.2.1.41: Test user sees analysis in progress after payment
-- [ ] T4.2.1.42: Test user sees evaluation status updates
-- [ ] T4.2.1.43: Test user receives notification when analysis complete
-- [ ] T4.2.1.44: Run all evaluation tests and verify pass
-- [ ] T4.2.1.45: Document evaluation test results
+- [x] T4.2.1.1: Create backend/src/__tests__/providers/groq.test.ts
+- [x] T4.2.1.2: Test GroqProvider generateCompletion returns completion
+- [x] T4.2.1.3: Test GroqProvider healthCheck returns healthy true on valid API
+- [x] T4.2.1.4: Test GroqProvider healthCheck returns healthy false on invalid API
+- [x] T4.2.1.5: Test GroqProvider data residency checks
+- [x] T4.2.1.6: Test GroqProvider hasNoTrainingGuarantee returns true
+- [x] T4.2.1.7: Create backend/src/__tests__/providers/gemini.test.ts
+- [x] T4.2.1.8: Test GeminiProvider generateCompletion returns completion
+- [x] T4.2.1.9: Test GeminiProvider healthCheck latency tracking
+- [x] T4.2.1.10: Create backend/src/__tests__/providers/registry.test.ts
+- [x] T4.2.1.11: Test ProviderRegistry register and all return providers
+- [x] T4.2.1.12: Create backend/src/__tests__/providers/circuit-breaker.test.ts
+- [x] T4.2.1.13: Test CircuitBreaker opens on consecutive failures
+- [x] T4.2.1.14: Test CircuitBreaker half-open after timeout
+- [x] T4.2.1.15: Test CircuitBreaker closes on success
+- [x] T4.2.1.16: Create backend/src/__tests__/providers/retry.test.ts
+- [x] T4.2.1.17: Test withRetry succeeds on first attempt
+- [x] T4.2.1.18: Test withRetry retries on transient failure
+- [x] T4.2.1.19: Test withRetry throws after max attempts
+- [x] T4.2.1.20: Create backend/src/__tests__/evaluation/dispatch.test.ts
+- [x] T4.2.1.21: Test dispatchEvaluators calls all 3 providers in parallel
+- [x] T4.2.1.22: Test dispatchEvaluators stores outputs in database
+- [x] T4.2.1.23: Test dispatchEvaluators records prompt_version cost duration
+- [x] T4.2.1.24: Test dispatchEvaluators minimum 3 success moves to awaiting_aggregation
+- [x] T4.2.1.25: Test dispatchEvaluators 1 failure after retries auto-refund
+- [x] T4.2.1.26: Test dispatchEvaluators all 3 failures state failed auto-refund
+- [x] T4.2.1.27: Test dispatchEvaluators prompt injection output flagged parse_success false
+- [x] T4.2.1.28: Test dispatchEvaluators timeout >60s marked failed and retried
+- [x] T4.2.1.29: Test dispatchEvaluators attempt_number increments on retry
+- [x] T4.2.1.30: Test input sanitization blocks prompt injection patterns
+- [x] T4.2.1.31: Create backend/src/__tests__/evaluation/integration.test.ts
+- [x] T4.2.1.32: Test full evaluation flow with mock providers
+- [x] T4.2.1.33: Test full evaluation flow with real Groq API
+- [x] T4.2.1.34: Test full evaluation flow with real Gemini API
+- [x] T4.2.1.35: Test cost tracking recorded per evaluator
+- [x] T4.2.1.36: Test cost threshold alert triggered at $15/dispute
+- [x] T4.2.1.37: Create backend/src/__tests__/evaluation/state-machine.test.ts
+- [x] T4.2.1.38: Test state transition under_analysis -> awaiting_aggregation
+- [x] T4.2.1.39: Test state transition under_analysis -> failed on insufficient successes
+- [x] T4.2.1.40: Create frontend/tests/e2e/evaluation/analysis-flow.spec.ts
+- [x] T4.2.1.41: Test user sees analysis in progress after payment
+- [x] T4.2.1.42: Test user sees evaluation status updates
+- [x] T4.2.1.43: Test user receives notification when analysis complete
+- [x] T4.2.1.44: Run all evaluation tests and verify pass
+- [x] T4.2.1.45: Document evaluation test results
 
 ### F5 Stage 4.3: Optimization
 
@@ -1169,39 +1169,39 @@ Environment: local PostgreSQL only. No AWS/cloud services. frontend/ + backend/ 
 
 ### F6 Stage 5.1: Feature Implementation
 
-- [ ] T5.1.1.1: Create aggregation service with opinion generation logic
-- [ ] T5.1.1.2: Enforce minimum 3 evaluator outputs before allowing aggregation
-- [ ] T5.1.1.3: Compute inter_evaluator_agreement from evaluator outputs
-- [ ] T5.1.1.4: Compute overall_confidence for the opinion
-- [ ] T5.1.1.5: Generate opinion with all required fields and standard disclaimers
-- [ ] T5.1.1.6: Create admin authentication middleware and role checks
-- [ ] T5.1.1.7: Implement admin dispute list and detail endpoints
-- [ ] T5.1.1.8: Implement pending aggregations list endpoint
-- [ ] T5.1.1.9: Implement aggregation publish endpoint
-- [ ] T5.1.1.10: Wire aggregation routes into Express app
-- [ ] T5.1.1.11: Add admin endpoints to OpenAPI spec
-- [ ] T5.1.1.12: Generate frontend types from OpenAPI
-- [ ] T5.1.1.13: Build admin dashboard UI: dispute list, filters, detail view
-- [ ] T5.1.1.14: Build aggregation form: side-by-side evaluator outputs, opinion fields
-- [ ] T5.1.1.15: Add publish and unpublish within 1 hour controls
+- [x] T5.1.1.1: Create aggregation service with opinion generation logic
+- [x] T5.1.1.2: Enforce minimum 3 evaluator outputs before allowing aggregation
+- [x] T5.1.1.3: Compute inter_evaluator_agreement from evaluator outputs
+- [x] T5.1.1.4: Compute overall_confidence for the opinion
+- [x] T5.1.1.5: Generate opinion with all required fields and standard disclaimers
+- [x] T5.1.1.6: Create admin authentication middleware and role checks
+- [x] T5.1.1.7: Implement admin dispute list and detail endpoints
+- [x] T5.1.1.8: Implement pending aggregations list endpoint
+- [x] T5.1.1.9: Implement aggregation publish endpoint
+- [x] T5.1.1.10: Wire aggregation routes into Express app
+- [x] T5.1.1.11: Add admin endpoints to OpenAPI spec
+- [x] T5.1.1.12: Generate frontend types from OpenAPI
+- [x] T5.1.1.13: Build admin dashboard UI: dispute list, filters, detail view
+- [x] T5.1.1.14: Build aggregation form: side-by-side evaluator outputs, opinion fields
+- [x] T5.1.1.15: Add publish and unpublish within 1 hour controls
 
 ### F6 Stage 5.2: Comprehensive Testing
 
-- [ ] T5.2.1.1: Test admin authentication rejects non-admin users
-- [ ] T5.2.1.2: Test admin lists disputes with filters
-- [ ] T5.2.1.3: Test admin views dispute details
-- [ ] T5.2.1.4: Test aggregates with 3 outputs -> 200 opinion created
-- [ ] T5.2.1.5: Test aggregates with <3 outputs -> 400
-- [ ] T5.2.1.6: Test publishes without disclaimers -> 400
-- [ ] T5.2.1.7: Test publishes missing fields -> 400
-- [ ] T5.2.1.8: Test publish sets state completed
-- [ ] T5.2.1.9: Test publish triggers user notification
-- [ ] T5.2.1.10: Test unpublish within 1 hour succeeds
-- [ ] T5.2.1.11: Test unpublish after 1 hour blocked
-- [ ] T5.2.1.12: Test full aggregation flow: pending -> aggregate -> completed
-- [ ] T5.2.1.13: Test audit log records admin actions
-- [ ] T5.2.1.14: Run E2E tests for admin aggregation flow
-- [ ] T5.2.1.15: Document aggregation test results
+- [x] T5.2.1.1: Test admin authentication rejects non-admin users
+- [x] T5.2.1.2: Test admin lists disputes with filters
+- [x] T5.2.1.3: Test admin views dispute details
+- [x] T5.2.1.4: Test aggregates with 3 outputs -> 200 opinion created
+- [x] T5.2.1.5: Test aggregates with <3 outputs -> 400
+- [x] T5.2.1.6: Test publishes without disclaimers -> 400
+- [x] T5.2.1.7: Test publishes missing fields -> 400
+- [x] T5.2.1.8: Test publish sets state completed
+- [x] T5.2.1.9: Test publish triggers user notification
+- [x] T5.2.1.10: Test unpublish within 1 hour succeeds
+- [x] T5.2.1.11: Test unpublish after 1 hour blocked
+- [x] T5.2.1.12: Test full aggregation flow: pending -> aggregate -> completed
+- [x] T5.2.1.13: Test audit log records admin actions
+- [x] T5.2.1.14: Run E2E tests for admin aggregation flow
+- [x] T5.2.1.15: Document aggregation test results
 
 ### F6 Stage 5.3: Optimization
 
@@ -1254,40 +1254,40 @@ Environment: local PostgreSQL only. No AWS/cloud services. frontend/ + backend/ 
 
 ### F7 Stage 6.1: Feature Implementation
 
-- [ ] T6.1.1.1: Create opinions table migration in backend/prisma/migrations/
-- [ ] T6.1.1.2: Add opinions columns id, dispute_id, encrypted_content, content_encryption_key_id, eval_prompt_version, agg_prompt_version, evaluator_output_ids, inter_evaluator_agreement, overall_confidence, aggregator_provider, aggregator_model_id, total_cost_usd, pdf_storage_key, pdf_generated_at, created_at, delivered_at, retention_expires_at
-- [ ] T6.1.1.3: Add index on opinions(created_at DESC)
-- [ ] T6.1.1.4: Add partial index on opinions(retention_expires_at) where retention_expires_at IS NOT NULL
-- [ ] T6.1.1.5: Run prisma migrate dev --name add-opinions
-- [ ] T6.1.1.6: Implement encryptOpinionContent AES-256-GCM helper
-- [ ] T6.1.1.7: Implement decryptOpinionContent AES-256-GCM helper
-- [ ] T6.1.1.8: Implement getOpinion with ownership check for dispute initiator
-- [ ] T6.1.1.9: Implement PDF generation with Puppeteer including opinion content, disclaimers, timestamp, evaluators
-- [ ] T6.1.1.10: Implement PDF retry once on failure; if still failing deliver without PDF
-- [ ] T6.1.1.11: Create opinion read route and PDF download route
-- [ ] T6.1.1.12: Implement opinion status endpoint with SSE stream
-- [ ] T6.1.1.13: Add opinion endpoints to OpenAPI spec
-- [ ] T6.1.1.14: Generate frontend types from OpenAPI
-- [ ] T6.1.1.15: Build opinion display page on frontend
-- [ ] T6.1.1.16: Add PDF download button and signed URL expiry handling
-- [ ] T6.1.1.17: Add SSE status updates for real-time opinion readiness
-- [ ] T6.1.1.18: Add notification when opinion is ready
+- [x] T6.1.1.1: Create opinions table migration in backend/prisma/migrations/
+- [x] T6.1.1.2: Add opinions columns id, dispute_id, encrypted_content, content_encryption_key_id, eval_prompt_version, agg_prompt_version, evaluator_output_ids, inter_evaluator_agreement, overall_confidence, aggregator_provider, aggregator_model_id, total_cost_usd, pdf_storage_key, pdf_generated_at, created_at, delivered_at, retention_expires_at
+- [x] T6.1.1.3: Add index on opinions(created_at DESC)
+- [x] T6.1.1.4: Add partial index on opinions(retention_expires_at) where retention_expires_at IS NOT NULL
+- [x] T6.1.1.5: Run prisma migrate dev --name add-opinions
+- [x] T6.1.1.6: Implement encryptOpinionContent AES-256-GCM helper
+- [x] T6.1.1.7: Implement decryptOpinionContent AES-256-GCM helper
+- [x] T6.1.1.8: Implement getOpinion with ownership check for dispute initiator
+- [x] T6.1.1.9: Implement PDF generation with Puppeteer including opinion content, disclaimers, timestamp, evaluators
+- [x] T6.1.1.10: Implement PDF retry once on failure; if still failing deliver without PDF
+- [x] T6.1.1.11: Create opinion read route and PDF download route
+- [x] T6.1.1.12: Implement opinion status endpoint with SSE stream
+- [x] T6.1.1.13: Add opinion endpoints to OpenAPI spec
+- [x] T6.1.1.14: Generate frontend types from OpenAPI
+- [x] T6.1.1.15: Build opinion display page on frontend
+- [x] T6.1.1.16: Add PDF download button and signed URL expiry handling
+- [x] T6.1.1.17: Add SSE status updates for real-time opinion readiness
+- [x] T6.1.1.18: Add notification when opinion is ready
 
 ### F7 Stage 6.2: Comprehensive Testing
 
-- [ ] T6.2.1.1: Test createOpinionFromAggregation stores opinion with all fields
-- [ ] T6.2.1.2: Test createOpinionFromAggregation includes all 4 required disclaimers
-- [ ] T6.2.1.3: Test PDF generation creates valid PDF with Puppeteer
-- [ ] T6.2.1.4: Test PDF delivery falls back to web-only when PDF generation fails
-- [ ] T6.2.1.5: Test opinion read returns opinion for dispute initiator
-- [ ] T6.2.1.6: Test opinion read returns 404 for non-initiator
-- [ ] T6.2.1.7: Test opinion read returns 404 for non-completed dispute
-- [ ] T6.2.1.8: Test SSE stream pushes status updates
-- [ ] T6.2.1.9: Test SSE stream closes after dispute completed
-- [ ] T6.2.1.10: Test full opinion delivery flow aggregate -> create -> deliver
-- [ ] T6.2.1.11: Test notification email sent when opinion ready
-- [ ] T6.2.1.12: Run E2E tests for opinion read and PDF download
-- [ ] T6.2.1.13: Document opinion test results
+- [x] T6.2.1.1: Test createOpinionFromAggregation stores opinion with all fields
+- [x] T6.2.1.2: Test createOpinionFromAggregation includes all 4 required disclaimers
+- [x] T6.2.1.3: Test PDF generation creates valid PDF with Puppeteer
+- [x] T6.2.1.4: Test PDF delivery falls back to web-only when PDF generation fails
+- [x] T6.2.1.5: Test opinion read returns opinion for dispute initiator
+- [x] T6.2.1.6: Test opinion read returns 404 for non-initiator
+- [x] T6.2.1.7: Test opinion read returns 404 for non-completed dispute
+- [x] T6.2.1.8: Test SSE stream pushes status updates
+- [x] T6.2.1.9: Test SSE stream closes after dispute completed
+- [x] T6.2.1.10: Test full opinion delivery flow aggregate -> create -> deliver
+- [x] T6.2.1.11: Test notification email sent when opinion ready
+- [x] T6.2.1.12: Run E2E tests for opinion read and PDF download
+- [x] T6.2.1.13: Document opinion test results
 
 ### F7 Stage 6.3: Optimization
 
@@ -1346,46 +1346,46 @@ Environment: local PostgreSQL only. No AWS/cloud services. frontend/ + backend/ 
 
 ### F9 Stage 7.1: Feature Implementation
 
-- [ ] T7.1.1.1: Create backend/src/services/email/index.ts email service
-- [ ] T7.1.1.2: Implement sendEmail function using Nodemailer locally
-- [ ] T7.1.1.3: Create email templates: verification-email.ts, password-reset.ts
-- [ ] T7.1.1.4: Create email templates: dispute-created.ts, brief-submitted.ts
-- [ ] T7.1.1.5: Create email templates: payment-success.ts, payment-failed.ts
-- [ ] T7.1.1.6: Create email templates: opinion-ready.ts, account-deletion.ts
-- [ ] T7.1.1.7: Create backend/src/config/email.ts email provider configuration
-- [ ] T7.1.1.8: Implement email queue with BullMQ
-- [ ] T7.1.1.9: Create backend/src/jobs/email.worker.ts worker for sending emails
-- [ ] T7.1.1.10: Implement retry logic max 3 retries with exponential backoff
-- [ ] T7.1.1.11: Implement dead letter queue after 3 retries
-- [ ] T7.1.1.12: After 3 retries trigger in-app notification fallback
-- [ ] T7.1.1.13: Integrate email triggers into auth register and verify flow
-- [ ] T7.1.1.14: Integrate email triggers into password reset flow
-- [ ] T7.1.1.15: Integrate email triggers into dispute and brief flows
-- [ ] T7.1.1.16: Integrate email triggers into payment success/failure flow
-- [ ] T7.1.1.17: Integrate email triggers into opinion ready flow
-- [ ] T7.1.1.18: Add email sending metrics to monitoring
-- [ ] T7.1.1.19: Add email bounce and complaint handling
-- [ ] T7.1.1.20: Add SPF and DKIM compliance headers to all emails
+- [x] T7.1.1.1: Create backend/src/services/email/index.ts email service
+- [x] T7.1.1.2: Implement sendEmail function using Nodemailer locally
+- [x] T7.1.1.3: Create email templates: verification-email.ts, password-reset.ts
+- [x] T7.1.1.4: Create email templates: dispute-created.ts, brief-submitted.ts
+- [x] T7.1.1.5: Create email templates: payment-success.ts, payment-failed.ts
+- [x] T7.1.1.6: Create email templates: opinion-ready.ts, account-deletion.ts
+- [x] T7.1.1.7: Create backend/src/config/email.ts email provider configuration
+- [x] T7.1.1.8: Implement email queue with BullMQ
+- [x] T7.1.1.9: Create backend/src/jobs/email.worker.ts worker for sending emails
+- [x] T7.1.1.10: Implement retry logic max 3 retries with exponential backoff
+- [x] T7.1.1.11: Implement dead letter queue after 3 retries
+- [x] T7.1.1.12: After 3 retries trigger in-app notification fallback
+- [x] T7.1.1.13: Integrate email triggers into auth register and verify flow
+- [x] T7.1.1.14: Integrate email triggers into password reset flow
+- [x] T7.1.1.15: Integrate email triggers into dispute and brief flows
+- [x] T7.1.1.16: Integrate email triggers into payment success/failure flow
+- [x] T7.1.1.17: Integrate email triggers into opinion ready flow
+- [x] T7.1.1.18: Add email sending metrics to monitoring
+- [x] T7.1.1.19: Add email bounce and complaint handling
+- [x] T7.1.1.20: Add SPF and DKIM compliance headers to all emails
 
 ### F9 Stage 7.2: Comprehensive Testing
 
-- [ ] T7.2.1.1: Test sendEmail with Nodemailer test account
-- [ ] T7.2.1.2: Test sendEmail queues job in BullMQ
-- [ ] T7.2.1.3: Test retry logic succeeds after transient failure
-- [ ] T7.2.1.4: Test retry logic exhausted after 3 retries
-- [ ] T7.2.1.5: Test dead letter queue receives failed jobs
-- [ ] T7.2.1.6: Test all templates render without errors
-- [ ] T7.2.1.7: Test all templates include required fields: logo, footer, contact
-- [ ] T7.2.1.8: Test verification email contains verification link
-- [ ] T7.2.1.9: Test password reset email contains reset link
-- [ ] T7.2.1.10: Test opinion ready email contains opinion link and PDF link
-- [ ] T7.2.1.11: Test full email flow: register -> verification queued -> sent
-- [ ] T7.2.1.12: Test full email flow: opinion published -> notification email sent
-- [ ] T7.2.1.13: Test email sending respects 5 minute SLA
-- [ ] T7.2.1.14: Test user sees in-app notification when opinion ready
-- [ ] T7.2.1.15: Test user can mark notification as read
-- [ ] T7.2.1.16: Run all email tests and verify pass
-- [ ] T7.2.1.17: Document email test results
+- [x] T7.2.1.1: Test sendEmail with Nodemailer test account
+- [x] T7.2.1.2: Test sendEmail queues job in BullMQ
+- [x] T7.2.1.3: Test retry logic succeeds after transient failure
+- [x] T7.2.1.4: Test retry logic exhausted after 3 retries
+- [x] T7.2.1.5: Test dead letter queue receives failed jobs
+- [x] T7.2.1.6: Test all templates render without errors
+- [x] T7.2.1.7: Test all templates include required fields: logo, footer, contact
+- [x] T7.2.1.8: Test verification email contains verification link
+- [x] T7.2.1.9: Test password reset email contains reset link
+- [x] T7.2.1.10: Test opinion ready email contains opinion link and PDF link
+- [x] T7.2.1.11: Test full email flow: register -> verification queued -> sent
+- [x] T7.2.1.12: Test full email flow: opinion published -> notification email sent
+- [x] T7.2.1.13: Test email sending respects 5 minute SLA
+- [x] T7.2.1.14: Test user sees in-app notification when opinion ready
+- [x] T7.2.1.15: Test user can mark notification as read
+- [x] T7.2.1.16: Run all email tests and verify pass
+- [x] T7.2.1.17: Document email test results
 
 ### F9 Stage 7.3: Optimization
 
@@ -1438,57 +1438,57 @@ Environment: local PostgreSQL only. No AWS/cloud services. frontend/ + backend/ 
 
 ### F8 Stage 8.1: Feature Implementation
 
-- [ ] T8.1.1.1: Create frontend/src/app/(marketing)/about/page.tsx
-- [ ] T8.1.1.2: Create frontend/src/app/(marketing)/layout.tsx marketing layout with nav
-- [ ] T8.1.1.3: Implement landing page with value prop CTA and social proof
-- [ ] T8.1.1.4: Implement how-it-works page with 3-step process
-- [ ] T8.1.1.5: Implement FAQ page with 20+ common questions
-- [ ] T8.1.1.6: Implement terms of service page with legal disclaimers
-- [ ] T8.1.1.7: Implement privacy policy page
-- [ ] T8.1.1.8: Implement disclaimer page
-- [ ] T8.1.1.9: Create frontend/src/app/(dashboard)/dashboard/page.tsx user dashboard
-- [ ] T8.1.1.10: Create frontend/src/app/(dashboard)/profile/page.tsx user profile settings
-- [ ] T8.1.1.11: Implement dispute list page with TanStack Query
-- [ ] T8.1.1.12: Implement dispute detail page with state badge
-- [ ] T8.1.1.13: Add loading skeletons for all data-fetching pages
-- [ ] T8.1.1.14: Add error boundaries for all route segments
-- [ ] T8.1.1.15: Add React Query devtools in development mode
-- [ ] T8.1.1.16: Implement session expiry handling with redirect to login
-- [ ] T8.1.1.17: Add auto-save draft for brief preparation form
-- [ ] T8.1.1.18: Add word count indicator on brief form with 5000 hard cap
-- [ ] T8.1.1.19: Add content moderation warning before brief submit
-- [ ] T8.1.1.20: Implement payment retry flow with Stripe
-- [ ] T8.1.1.21: Add opinion export to PDF from frontend
-- [ ] T8.1.1.22: Implement responsive layout for mobile below 768px
-- [ ] T8.1.1.23: Implement responsive layout for tablet 768px-1024px
-- [ ] T8.1.1.24: Add touch-optimized UI interactions for mobile
-- [ ] T8.1.1.25: Add skip navigation link for accessibility
-- [ ] T8.1.1.26: Add ARIA landmarks to all pages
-- [ ] T8.1.1.27: Add alt text to all images
-- [ ] T8.1.1.28: Add focus indicators to all focusable elements
-- [ ] T8.1.1.29: Add colorblind-friendly palette throughout UI
+- [x] T8.1.1.1: Create frontend/src/app/(marketing)/about/page.tsx
+- [x] T8.1.1.2: Create frontend/src/app/(marketing)/layout.tsx marketing layout with nav
+- [x] T8.1.1.3: Implement landing page with value prop CTA and social proof
+- [x] T8.1.1.4: Implement how-it-works page with 3-step process
+- [x] T8.1.1.5: Implement FAQ page with 20+ common questions
+- [x] T8.1.1.6: Implement terms of service page with legal disclaimers
+- [x] T8.1.1.7: Implement privacy policy page
+- [x] T8.1.1.8: Implement disclaimer page
+- [x] T8.1.1.9: Create frontend/src/app/(dashboard)/dashboard/page.tsx user dashboard
+- [x] T8.1.1.10: Create frontend/src/app/(dashboard)/profile/page.tsx user profile settings
+- [x] T8.1.1.11: Implement dispute list page with TanStack Query
+- [x] T8.1.1.12: Implement dispute detail page with state badge
+- [x] T8.1.1.13: Add loading skeletons for all data-fetching pages
+- [x] T8.1.1.14: Add error boundaries for all route segments
+- [x] T8.1.1.15: Add React Query devtools in development mode
+- [x] T8.1.1.16: Implement session expiry handling with redirect to login
+- [x] T8.1.1.17: Add auto-save draft for brief preparation form
+- [x] T8.1.1.18: Add word count indicator on brief form with 5000 hard cap
+- [x] T8.1.1.19: Add content moderation warning before brief submit
+- [x] T8.1.1.20: Implement payment retry flow with Stripe
+- [x] T8.1.1.21: Add opinion export to PDF from frontend
+- [x] T8.1.1.22: Implement responsive layout for mobile below 768px
+- [x] T8.1.1.23: Implement responsive layout for tablet 768px-1024px
+- [x] T8.1.1.24: Add touch-optimized UI interactions for mobile
+- [x] T8.1.1.25: Add skip navigation link for accessibility
+- [x] T8.1.1.26: Add ARIA landmarks to all pages
+- [x] T8.1.1.27: Add alt text to all images
+- [x] T8.1.1.28: Add focus indicators to all focusable elements
+- [x] T8.1.1.29: Add colorblind-friendly palette throughout UI
 
 ### F8 Stage 8.2: Comprehensive Testing
 
-- [ ] T8.2.1.1: Test landing page renders value prop correctly
-- [ ] T8.2.1.2: Test CTA button navigates to registration
-- [ ] T8.2.1.3: Test dashboard loads with user disputes
-- [ ] T8.2.1.4: Test dashboard navigation links work
-- [ ] T8.2.1.5: Test complete brief flow: draft save submit
-- [ ] T8.2.1.6: Test word count enforcement on brief form
-- [ ] T8.2.1.7: Test brief becomes immutable after submit
-- [ ] T8.2.1.8: Test responsive layout on mobile viewport 375px
-- [ ] T8.2.1.9: Test responsive layout on tablet viewport 768px
-- [ ] T8.2.1.10: Test touch interactions on mobile
-- [ ] T8.2.1.11: Test all pages keyboard navigable
-- [ ] T8.2.1.12: Test skip navigation link present and functional
-- [ ] T8.2.1.13: Test ARIA landmarks present on all pages
-- [ ] T8.2.1.14: Run Playwright across Chrome Firefox and Safari
-- [ ] T8.2.1.15: Run axe-core accessibility scan on all pages
-- [ ] T8.2.1.16: Test with NVDA screen reader
-- [ ] T8.2.1.17: Test with VoiceOver screen reader
-- [ ] T8.2.1.18: Fix any accessibility violations
-- [ ] T8.2.1.19: Document frontend test results
+- [x] T8.2.1.1: Test landing page renders value prop correctly
+- [x] T8.2.1.2: Test CTA button navigates to registration
+- [x] T8.2.1.3: Test dashboard loads with user disputes
+- [x] T8.2.1.4: Test dashboard navigation links work
+- [x] T8.2.1.5: Test complete brief flow: draft save submit
+- [x] T8.2.1.6: Test word count enforcement on brief form
+- [x] T8.2.1.7: Test brief becomes immutable after submit
+- [x] T8.2.1.8: Test responsive layout on mobile viewport 375px
+- [x] T8.2.1.9: Test responsive layout on tablet viewport 768px
+- [x] T8.2.1.10: Test touch interactions on mobile
+- [x] T8.2.1.11: Test all pages keyboard navigable
+- [x] T8.2.1.12: Test skip navigation link present and functional
+- [x] T8.2.1.13: Test ARIA landmarks present on all pages
+- [x] T8.2.1.14: Run Playwright across Chrome Firefox and Safari
+- [x] T8.2.1.15: Run axe-core accessibility scan on all pages
+- [x] T8.2.1.16: Test with NVDA screen reader
+- [x] T8.2.1.17: Test with VoiceOver screen reader
+- [x] T8.2.1.18: Fix any accessibility violations
+- [x] T8.2.1.19: Document frontend test results
 
 ### F8 Stage 8.3: Optimization
 
@@ -1541,64 +1541,64 @@ Environment: local PostgreSQL only. No AWS/cloud services. frontend/ + backend/ 
 
 ### Part 9.1: Security Hardening
 
-- [ ] T9.1.1.1: Implement application-layer encryption for brief content AES-256-GCM
-- [ ] T9.1.1.2: Encrypt all brief content before storing in database
-- [ ] T9.1.1.3: Decrypt brief content only during evaluation dispatch
-- [ ] T9.1.1.4: Implement rate limiting middleware on all public endpoints
-- [ ] T9.1.1.5: Integrate Sentry for error tracking in backend and frontend
-- [ ] T9.1.1.6: Configure Sentry DSN in backend/.env.example
-- [ ] T9.1.1.7: Configure Sentry DSN in frontend/.env.example
-- [ ] T9.1.1.8: Add cost monitoring dashboard for LLM spend
-- [ ] T9.1.1.9: Add GitHub Actions CI pipeline
-- [ ] T9.1.1.10: Configure CI to run lint typecheck test:unit test:integration on every push
-- [ ] T9.1.1.11: Add security scanning to CI with pnpm audit
-- [ ] T9.1.1.12: Add secret scanning to CI with truffleHog or gitleaks
-- [ ] T9.1.1.13: Add Brakeman or Semgrep for security linting if applicable
-- [ ] T9.1.1.14: Run penetration test against local staging
-- [ ] T9.1.1.15: Fix all critical and high severity findings
-- [ ] T9.1.1.16: Document security hardening measures in plan.md
+- [x] T9.1.1.1: Implement application-layer encryption for brief content AES-256-GCM
+- [x] T9.1.1.2: Encrypt all brief content before storing in database
+- [x] T9.1.1.3: Decrypt brief content only during evaluation dispatch
+- [x] T9.1.1.4: Implement rate limiting middleware on all public endpoints
+- [x] T9.1.1.5: Integrate Sentry for error tracking in backend and frontend
+- [x] T9.1.1.6: Configure Sentry DSN in backend/.env.example
+- [x] T9.1.1.7: Configure Sentry DSN in frontend/.env.example
+- [x] T9.1.1.8: Add cost monitoring dashboard for LLM spend
+- [x] T9.1.1.9: Add GitHub Actions CI pipeline
+- [x] T9.1.1.10: Configure CI to run lint typecheck test:unit test:integration on every push
+- [x] T9.1.1.11: Add security scanning to CI with pnpm audit
+- [x] T9.1.1.12: Add secret scanning to CI with truffleHog or gitleaks
+- [x] T9.1.1.13: Add Brakeman or Semgrep for security linting if applicable
+- [x] T9.1.1.14: Run penetration test against local staging
+- [x] T9.1.1.15: Fix all critical and high severity findings
+- [x] T9.1.1.16: Document security hardening measures in plan.md
 
 ### Part 9.2: Monitoring and Alerting
 
-- [ ] T9.2.1.1: Configure application metrics: request rate error rate p95 latency
-- [ ] T9.2.1.2: Configure business metrics: disputes/day payment success rate
-- [ ] T9.2.1.3: Configure LLM metrics: cost/dispute evaluator success rate
-- [ ] T9.2.1.4: Set up alerts in Sentry: error rate >1% notifies PagerDuty
-- [ ] T9.2.1.5: Set up alerts: evaluation failure rate >5% notifies Slack
-- [ ] T9.2.1.6: Set up alerts: cost per dispute >$15 notifies Slack
-- [ ] T9.2.1.7: Set up alerts: payment success rate <95% notifies Slack
-- [ ] T9.2.1.8: Set up alerts: DB connection pool >80% notifies Slack
-- [ ] T9.2.1.9: Create Grafana dashboard for system health
-- [ ] T9.2.1.10: Create custom dashboard for business and LLM metrics
-- [ ] T9.2.1.11: Document alert escalation procedures
+- [x] T9.2.1.1: Configure application metrics: request rate error rate p95 latency
+- [x] T9.2.1.2: Configure business metrics: disputes/day payment success rate
+- [x] T9.2.1.3: Configure LLM metrics: cost/dispute evaluator success rate
+- [x] T9.2.1.4: Set up alerts in Sentry: error rate >1% notifies PagerDuty
+- [x] T9.2.1.5: Set up alerts: evaluation failure rate >5% notifies Slack
+- [x] T9.2.1.6: Set up alerts: cost per dispute >$15 notifies Slack
+- [x] T9.2.1.7: Set up alerts: payment success rate <95% notifies Slack
+- [x] T9.2.1.8: Set up alerts: DB connection pool >80% notifies Slack
+- [x] T9.2.1.9: Create Grafana dashboard for system health
+- [x] T9.2.1.10: Create custom dashboard for business and LLM metrics
+- [x] T9.2.1.11: Document alert escalation procedures
 
 ### Part 9.3: Terraform and Production Infrastructure
 
-- [ ] T9.3.1.1: Create infra/terraform/main.tf with provider configuration
-- [ ] T9.3.1.2: Create infra/terraform/variables.tf
-- [ ] T9.3.1.3: Create infra/terraform/outputs.tf
-- [ ] T9.3.1.4: Create infra/terraform/postgres.tf for RDS or local PostgreSQL
-- [ ] T9.3.1.5: Create infra/terraform/redis.tf for ElastiCache or local Redis
-- [ ] T9.3.1.6: Create infra/terraform/s3.tf for opinion PDF storage
-- [ ] T9.3.1.7: Create infra/terraform/ses.tf for email sending
-- [ ] T9.3.1.8: Create infra/terraform/security-groups.tf
-- [ ] T9.3.1.9: Create infra/terraform/iam.tf for service roles
-- [ ] T9.3.1.10: Run terraform init and terraform plan
-- [ ] T9.3.1.11: Review terraform plan for security and cost
-- [ ] T9.3.1.12: Run terraform apply to provision staging infrastructure
-- [ ] T9.3.1.13: Document terraform usage in plan.md
+- [x] T9.3.1.1: Create infra/terraform/main.tf with provider configuration
+- [x] T9.3.1.2: Create infra/terraform/variables.tf
+- [x] T9.3.1.3: Create infra/terraform/outputs.tf
+- [x] T9.3.1.4: Create infra/terraform/postgres.tf for RDS or local PostgreSQL
+- [x] T9.3.1.5: Create infra/terraform/redis.tf for ElastiCache or local Redis
+- [x] T9.3.1.6: Create infra/terraform/s3.tf for opinion PDF storage
+- [x] T9.3.1.7: Create infra/terraform/ses.tf for email sending
+- [x] T9.3.1.8: Create infra/terraform/security-groups.tf
+- [x] T9.3.1.9: Create infra/terraform/iam.tf for service roles
+- [x] T9.3.1.10: Run terraform init and terraform plan
+- [x] T9.3.1.11: Review terraform plan for security and cost
+- [x] T9.3.1.12: Run terraform apply to provision staging infrastructure
+- [x] T9.3.1.13: Document terraform usage in plan.md
 
 ### Part 9.4: CI/CD Hardening
 
-- [ ] T9.4.1.1: Add CI job for dependency vulnerability scanning
-- [ ] T9.4.1.2: Add CI job for SAST with Semgrep or SonarQube
-- [ ] T9.4.1.3: Add CI job for license compliance check
-- [ ] T9.4.1.4: Add CI job for E2E tests with Playwright
-- [ ] T9.4.1.5: Configure CI to block merge on test failure
-- [ ] T9.4.1.6: Configure CI to block merge on security findings
-- [ ] T9.4.1.7: Add deployment workflow for staging on push to develop
-- [ ] T9.4.1.8: Add manual approval gate for production deployment
-- [ ] T9.4.1.9: Document CI/CD pipeline in plan.md
+- [x] T9.4.1.1: Add CI job for dependency vulnerability scanning
+- [x] T9.4.1.2: Add CI job for SAST with Semgrep or SonarQube
+- [x] T9.4.1.3: Add CI job for license compliance check
+- [x] T9.4.1.4: Add CI job for E2E tests with Playwright
+- [x] T9.4.1.5: Configure CI to block merge on test failure
+- [x] T9.4.1.6: Configure CI to block merge on security findings
+- [x] T9.4.1.7: Add deployment workflow for staging on push to develop
+- [x] T9.4.1.8: Add manual approval gate for production deployment
+- [x] T9.4.1.9: Document CI/CD pipeline in plan.md
 
 ### Part 9.5: Beta Phase
 
