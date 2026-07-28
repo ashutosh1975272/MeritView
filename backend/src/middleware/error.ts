@@ -19,13 +19,13 @@ interface ErrorResponse {
     code: string;
     message: string;
     details?: Record<string, unknown>;
-    requestId: string;
-    documentationUrl: string;
+    request_id: string;
+    documentation_url: string;
   };
 }
 
 function getDocumentationUrl(code: string): string {
-  return `https://docs.meritview.app/errors/${code.toLowerCase().replace(/_/g, '-')}`;
+  return `https://docs.meritview.com/api/errors#${code}`;
 }
 
 function formatErrorResponse(error: AppError, requestId: string): ErrorResponse {
@@ -34,8 +34,8 @@ function formatErrorResponse(error: AppError, requestId: string): ErrorResponse 
       code: error.code,
       message: error.message,
       ...(error.details && { details: error.details }),
-      requestId,
-      documentationUrl: getDocumentationUrl(error.code),
+      request_id: requestId,
+      documentation_url: getDocumentationUrl(error.code),
     },
   };
 }

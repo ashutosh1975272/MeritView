@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { useAuthStore } from '@/stores/useAuthStore';
 
 interface VerifyForm {
-  token: string;
+  otp: string;
 }
 
 export default function VerifyEmailPage() {
@@ -20,15 +20,15 @@ export default function VerifyEmailPage() {
   const [resendLoading, setResendLoading] = useState(false);
 
   const token = searchParams.get('token');
+  const email = searchParams.get('email');
 
   const {
     register,
     handleSubmit,
-    watch,
     formState: { errors },
   } = useForm<VerifyForm>({
     defaultValues: {
-      token: token || '',
+      otp: token || '',
     },
   });
 
@@ -36,8 +36,14 @@ export default function VerifyEmailPage() {
     setError(null);
     setIsLoading(true);
 
+    if (!email) {
+      setError('Email address is missing. Please try registering again.');
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      await verifyEmail(data.token);
+      await verifyEmail(email, data.otp);
       setSuccess('Email verified successfully! Redirecting to dashboard...');
       setTimeout(() => {
         router.push('/dashboard');
@@ -54,9 +60,14 @@ export default function VerifyEmailPage() {
     setError(null);
     setResendLoading(true);
 
+    if (!email) {
+      setError('Email address is missing. Please try registering again.');
+      setResendLoading(false);
+      return;
+    }
+
     try {
-      // We need to get the email from localStorage or context
-      // For now, just show a message
+      await resendVerification(email);
       setSuccess('Verification email resent! Check your inbox.');
     } catch (err: any) {
       setError(err.message || 'Failed to resend email.');
@@ -65,14 +76,22 @@ export default function VerifyEmailPage() {
     }
   };
 
-  if (token && !isLoading) {
-    // Auto-submit if token is in URL
-    onSubmit({ token });
+  if (token && email && !isLoading) {
+    // Auto-submit if token and email are in URL
+    onSubmit({ otp: token });
     return null;
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4 py-12">
+    <div className="min-h-screen flex items-center justify-center bg-background px-4 py-12 relative">
+      <Link href="/" className="absolute left-4 top-4 md:left-8 md:top-8 inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        Home
+      </Link>
+      <Link href="/login" className="absolute right-4 top-4 md:right-8 md:top-8 inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2">
+        Sign in
+      </Link>
+
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
           <Link href="/" className="inline-flex items-center gap-2 font-semibold text-2xl mb-6">
@@ -105,30 +124,34 @@ export default function VerifyEmailPage() {
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" noValidate>
           <div className="space-y-2">
-            <label htmlFor="token" className="block text-sm font-medium">
+            <label htmlFor="otp" className="block text-sm font-medium">
               Verification Code
             </label>
             <input
-              id="token"
+              id="otp"
               type="text"
               autoComplete="one-time-code"
-              {...register('token', {
+              {...register('otp', {
                 required: 'Verification code is required',
                 minLength: {
                   value: 6,
-                  message: 'Code must be at least 6 characters',
+                  message: 'Code must be exactly 6 characters',
+                },
+                maxLength: {
+                  value: 6,
+                  message: 'Code must be exactly 6 characters',
                 },
               })}
               className={`w-full px-3 py-2 border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent text-center text-lg tracking-widest ${
-                errors.token ? 'border-destructive' : 'border-input'
+                errors.otp ? 'border-destructive' : 'border-input'
               }`}
               disabled={isLoading}
-              aria-invalid={errors.token ? 'true' : 'false'}
-              aria-describedby={errors.token ? 'token-error' : undefined}
+              aria-invalid={errors.otp ? 'true' : 'false'}
+              aria-describedby={errors.otp ? 'otp-error' : undefined}
             />
-            {errors.token && (
-              <p id="token-error" className="text-sm text-destructive" role="alert">
-                {errors.token.message}
+            {errors.otp && (
+              <p id="otp-error" className="text-sm text-destructive" role="alert">
+                {errors.otp.message}
               </p>
             )}
           </div>

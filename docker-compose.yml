@@ -1,0 +1,135 @@
+# MeritView Docker Compose Configuration
+#
+# Environment variable conventions:
+#   ${VAR?}       - Required variable; compose fails if not set
+#   ${VAR:-default} - Optional variable with fallback default
+#
+# Secrets must NOT be hardcoded. Provide them via:
+#   - Shell environment variables (export JWT_SECRET=...)
+#   - CI/CD secret injection
+#   - backend/.env (loaded via env_file; compose environment overrides file values)
+#
+# Required secrets for local development:
+#   JWT_SECRET, ENCRYPTION_KEY, FROM_EMAIL, SMTP_USER, SMTP_PASS,
+#   GROQ_API_KEY, GEMINI_API_KEY, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET
+# Optional:
+#   ANTHROPIC_API_KEY, OPENAI_API_KEY, MISTRAL_API_KEY, SENTRY_DSN
+
+x-common-vars: &common-vars
+  JWT_SECRET: ${JWT_SECRET?}
+  ENCRYPTION_KEY: ${ENCRYPTION_KEY?}
+  FROM_EMAIL: ${FROM_EMAIL?}
+  SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+  SMTP_PORT: ${SMTP_PORT:-587}
+  SMTP_USER: ${SMTP_USER?}
+  SMTP_PASS: ${SMTP_PASS?}
+  ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+  OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+  MISTRAL_API_KEY: ${MISTRAL_API_KEY:-}
+  GROQ_API_KEY: ${GROQ_API_KEY?}
+  GEMINI_API_KEY: ${GEMINI_API_KEY?}
+  STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY?}
+  STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET?}
+  SENTRY_DSN: ${SENTRY_DSN:-}
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: meritview-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-meritview}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: meritview-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: ../Dockerfile.backend
+      target: ${BACKEND_TARGET:-dev}
+    container_name: meritview-backend
+    restart: unless-stopped
+    env_file:
+      - backend/.env
+    ports:
+      - "3001:3001"
+    environment:
+      <<: *common-vars
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: ${PORT:-3001}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/meritview}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      JWT_ACCESS_EXPIRY: ${JWT_ACCESS_EXPIRY:-15m}
+      JWT_REFRESH_EXPIRY: ${JWT_REFRESH_EXPIRY:-7d}
+      S3_BUCKET: ${S3_BUCKET:-}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001/v1}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+    volumes:
+      - type: bind
+        source: ./backend/src
+        target: /app/src
+      - type: bind
+        source: ./backend/prisma
+        target: /app/prisma
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../Dockerfile.frontend
+      target: ${FRONTEND_TARGET:-dev}
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001/v1}
+    container_name: meritview-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001/v1}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+      NEXT_PUBLIC_STRIPE_PK: ${NEXT_PUBLIC_STRIPE_PK:-}
+      NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN:-}
+    volumes:
+      - type: bind
+        source: ./frontend/src
+        target: /app/src
+      - type: bind
+        source: ./frontend/public
+        target: /app/public
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  redis_data:

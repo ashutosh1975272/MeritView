@@ -58,6 +58,8 @@ export const viewport: Viewport = {
   maximumScale: 5,
 };
 
+import { Providers } from '@/components/Providers';
+
 export default function RootLayout({
   children,
 }: {
@@ -68,16 +70,17 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="icon" href="/icon.svg" type="image/svg+xml" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="manifest" href="/manifest.json" />
       </head>
       <body className="min-h-screen bg-background font-sans text-foreground">
-        <a href="#main-content" className="skip-link">
-          Skip to main content
-        </a>
-        {children}
+        <Providers>
+          <a href="#main-content" className="skip-link">
+            Skip to main content
+          </a>
+          {children}
+        </Providers>
       </body>
     </html>
   );

@@ -6,7 +6,7 @@ import { getMe, updateMe, deleteAccount } from '../../services/auth';
 import { logger } from '../../utils/logger';
 import { NotFoundError, ValidationError } from '../../utils/errors';
 
-const router = Router();
+const router: Router = Router();
 
 const updateMeSchema = z.object({
   body: z.object({

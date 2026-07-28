@@ -35,6 +35,39 @@ const config: Config = {
           900: '#0f172a',
           950: '#020617',
         },
+        background: '#f8fafc',
+        foreground: '#0f172a',
+        muted: {
+          DEFAULT: '#f1f5f9',
+          foreground: '#64748b',
+        },
+        card: {
+          DEFAULT: '#ffffff',
+          foreground: '#0f172a',
+        },
+        popover: {
+          DEFAULT: '#ffffff',
+          foreground: '#0f172a',
+        },
+        border: '#e2e8f0',
+        input: '#e2e8f0',
+        ring: '#0ea5e9',
+        accent: {
+          DEFAULT: '#f1f5f9',
+          foreground: '#0f172a',
+        },
+        destructive: {
+          DEFAULT: '#ef4444',
+          foreground: '#ffffff',
+        },
+        success: {
+          DEFAULT: '#22c55e',
+          foreground: '#ffffff',
+        },
+        warning: {
+          DEFAULT: '#f59e0b',
+          foreground: '#ffffff',
+        },
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
@@ -49,6 +82,20 @@ const config: Config = {
           xl: '1280px',
           '2xl': '1400px',
         },
+      },
+      keyframes: {
+        'accordion-down': {
+          from: { height: '0' },
+          to: { height: 'var(--radix-accordion-content-height)' },
+        },
+        'accordion-up': {
+          from: { height: 'var(--radix-accordion-content-height)' },
+          to: { height: '0' },
+        },
+      },
+      animation: {
+        'accordion-down': 'accordion-down 0.2s ease-out',
+        'accordion-up': 'accordion-up 0.2s ease-out',
       },
     },
   },

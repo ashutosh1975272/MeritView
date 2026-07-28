@@ -4,7 +4,18 @@ import { prisma } from '../../db/prisma';
 import { redis } from '../../config/redis';
 import * as bcrypt from 'bcrypt';
 import * as jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { ForbiddenError, NotFoundError, UnauthorizedError, ValidationError, ConflictError } from '../../utils/errors';
+
+vi.mock('../../config/env', () => ({
+  getEnv: () => ({
+    JWT_SECRET: 'test-jwt-secret-that-is-at-least-64-characters-long-for-testing-purposes-only!',
+    JWT_ACCESS_EXPIRY: '15m',
+    JWT_REFRESH_EXPIRY: '7d',
+    ENCRYPTION_KEY: 'test-encryption-key-that-is-exactly-64-characters-long-for-testing_',
+    FROM_EMAIL: 'test@meritview.app',
+  }),
+}));
 
 // Mock dependencies
 vi.mock('../../db/prisma', () => ({
@@ -16,6 +27,8 @@ vi.mock('../../db/prisma', () => ({
     },
     dispute: {
       findFirst: vi.fn(),
+      groupBy: vi.fn(),
+      findMany: vi.fn(),
     },
   },
 }));
@@ -29,6 +42,7 @@ vi.mock('../../config/redis', () => ({
     expire: vi.fn(),
     ttl: vi.fn(),
     keys: vi.fn(),
+    scan: vi.fn().mockResolvedValue(['0', []]),
   },
 }));
 
@@ -40,6 +54,13 @@ vi.mock('bcrypt', () => ({
 vi.mock('jsonwebtoken', () => ({
   sign: vi.fn(),
   verify: vi.fn(),
+}));
+
+vi.mock('../../jobs/queues', () => ({
+  addEmailJob: vi.fn().mockResolvedValue(undefined),
+  addEvaluationJob: vi.fn().mockResolvedValue(undefined),
+  evaluationQueue: { add: vi.fn().mockResolvedValue(undefined) },
+  emailQueue: { add: vi.fn().mockResolvedValue(undefined) },
 }));
 
 vi.mock('../../utils/logger', () => ({
@@ -59,18 +80,9 @@ describe('Auth Service', () => {
 
   describe('registerUser', () => {
     it('should register a new user successfully', async () => {
-      const mockUser = {
-        id: 'user_123',
-        email: 'test@example.com',
-        accountType: 'STANDARD',
-        emailVerified: false,
-      };
-
       (prisma.user.findUnique as any).mockResolvedValue(null);
       (bcrypt.hash as any).mockResolvedValue('hashed_password');
-      (prisma.user.create as any).mockResolvedValue(mockUser);
       (redis.setex as any).mockResolvedValue('OK');
-      (jwt.sign as any).mockReturnValue('access_token');
       
       const result = await registerUser({
         email: 'test@example.com',
@@ -79,9 +91,7 @@ describe('Auth Service', () => {
         marketingOptIn: false,
       });
 
-      expect(result.user.email).toBe('test@example.com');
-      expect(result.tokens.accessToken).toBe('access_token');
-      expect(prisma.user.create).toHaveBeenCalled();
+      expect(result.status).toBe('pending_verification');
       expect(redis.setex).toHaveBeenCalled();
     });
 
@@ -118,23 +128,23 @@ describe('Auth Service', () => {
 
   describe('verifyEmail', () => {
     it('should verify email with valid token', async () => {
-      (redis.get as any).mockResolvedValue('user_123');
+      const otpHash = crypto.createHash('sha256').update('valid_token').digest('hex');
+      (redis.get as any).mockResolvedValue(JSON.stringify({ email: 'test@example.com', passwordHash: 'hash', displayName: 'Test', marketingOptIn: false, otpHash }));
+      (prisma.user.create as any).mockResolvedValue({ id: 'user_123', email: 'test@example.com', accountType: 'STANDARD', emailVerified: true });
       (prisma.user.findUnique as any).mockResolvedValue({ id: 'user_123', emailVerified: false });
       (prisma.user.update as any).mockResolvedValue({ id: 'user_123', emailVerified: true });
       (redis.del as any).mockResolvedValue(1);
 
-      await verifyEmail('valid_token');
+      await verifyEmail('test@example.com', 'valid_token');
 
-      expect(prisma.user.update).toHaveBeenCalledWith({
-        where: { id: 'user_123' },
-        data: { emailVerified: true },
-      });
+      expect(prisma.user.create).toHaveBeenCalled();
+      expect(redis.del).toHaveBeenCalled();
     });
 
     it('should throw error for expired token', async () => {
       (redis.get as any).mockResolvedValue(null);
 
-      await expect(verifyEmail('expired_token')).rejects.toThrow(ValidationError);
+      await expect(verifyEmail('test@example.com', 'expired_token')).rejects.toThrow(ValidationError);
     });
   });
 
@@ -252,7 +262,7 @@ describe('Auth Service', () => {
 
   describe('completePasswordReset', () => {
     it('should reset password with valid token', async () => {
-      (redis.get as any).mockResolvedValue('user_123');
+      (redis.get as any).mockResolvedValue(JSON.stringify({ userId: 'user_123', ipAddress: undefined, userAgent: undefined, createdAt: Date.now() }));
       (bcrypt.hash as any).mockResolvedValue('new_hashed_password');
       (prisma.user.update as any).mockResolvedValue({ id: 'user_123', passwordHash: 'new_hashed_password' });
       (redis.del as any).mockResolvedValue(1);
@@ -273,7 +283,7 @@ describe('Auth Service', () => {
     });
 
     it('should throw error for weak password', async () => {
-      (redis.get as any).mockResolvedValue('user_123');
+      (redis.get as any).mockResolvedValue(JSON.stringify({ userId: 'user_123', ipAddress: undefined, userAgent: undefined, createdAt: Date.now() }));
 
       await expect(completePasswordReset('valid_token', 'weak')).rejects.toThrow(ValidationError);
     });
@@ -288,6 +298,7 @@ describe('Auth Service', () => {
         emailVerified: true,
         deletedAt: null,
       });
+      (prisma.dispute.groupBy as any).mockResolvedValue([]);
 
       const result = await getMe('user_123');
 
@@ -309,6 +320,7 @@ describe('Auth Service', () => {
         email: 'test@example.com',
         accountType: 'STANDARD',
         emailVerified: true,
+        role: 'STANDARD',
       });
 
       const result = await updateMe('user_123', {
@@ -331,7 +343,6 @@ describe('Auth Service', () => {
         disputes: [],
       });
       (prisma.user.update as any).mockResolvedValue({ id: 'user_123', deletedAt: new Date() });
-      (redis.keys as any).mockResolvedValue([]);
 
       await deleteAccount('user_123');
 

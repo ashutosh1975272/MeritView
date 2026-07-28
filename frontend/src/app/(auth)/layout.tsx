@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 export default function AuthLayout({
   children,
@@ -38,5 +39,5 @@ export default function AuthLayout({
     );
   }
 
-  return <>{children}</>;
+  return <ErrorBoundary>{children}</ErrorBoundary>;
 }

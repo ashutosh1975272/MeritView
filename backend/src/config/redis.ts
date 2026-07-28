@@ -44,6 +44,7 @@ export async function disconnectRedis(): Promise<void> {
 }
 
 export const redis = {
+  ping: () => getRedis().ping(),
   get: (key: string) => getRedis().get(key),
   set: (key: string, value: string, mode?: string, ttlMs?: number) => {
     const client = getRedis();
@@ -61,8 +62,13 @@ export const redis = {
   ttl: (key: string) => getRedis().ttl(key),
   pttl: (key: string) => getRedis().pttl(key),
   keys: (pattern: string) => getRedis().keys(pattern),
+  scan: (cursor: string, ...args: any[]) => getRedis().scan(cursor, ...args),
   incr: (key: string) => getRedis().incr(key),
+  incrby: (key: string, value: number) => getRedis().incrby(key, value),
   decr: (key: string) => getRedis().decr(key),
+  lpush: (key: string, value: string) => getRedis().lpush(key, value),
+  ltrim: (key: string, start: number, stop: number) => getRedis().ltrim(key, start, stop),
+  lrange: (key: string, start: number, stop: number) => getRedis().lrange(key, start, stop),
   eval: (script: string, numKeys: number, ...keys: string[]) => getRedis().eval(script, numKeys, ...keys),
   evalsha: (sha: string, numKeys: number, ...keys: string[]) => getRedis().evalsha(sha, numKeys, ...keys),
   script: {

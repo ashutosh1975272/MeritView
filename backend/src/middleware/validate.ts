@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { AnyZodObject, ZodError } from 'zod';
-import { ValidationError } from '../utils/errors';
+import { ValidationError, BadRequestError } from '../utils/errors';
 
 export function validate(schema: AnyZodObject) {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -13,8 +13,7 @@ export function validate(schema: AnyZodObject) {
       next();
     } catch (error) {
       if (error instanceof ZodError) {
-        const details = error.flatten().fieldErrors;
-        next(new ValidationError('Validation failed', details));
+        next(new BadRequestError('Validation failed', { issues: error.errors }));
       } else {
         next(error);
       }

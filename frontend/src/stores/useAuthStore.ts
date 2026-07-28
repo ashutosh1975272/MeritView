@@ -26,8 +26,8 @@ interface AuthState {
     acceptTerms: boolean;
     marketingOptIn?: boolean;
   }) => Promise<void>;
-  verifyEmail: (token: string) => Promise<void>;
-  resendVerification: () => Promise<void>;
+  verifyEmail: (email: string, otp: string) => Promise<void>;
+  resendVerification: (email: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshAccessToken: () => Promise<void>;
   checkAuth: () => Promise<void>;
@@ -36,7 +36,7 @@ interface AuthState {
   setUser: (user: User) => void;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/v1';
 
 async function fetchWithAuth<T>(
   endpoint: string,
@@ -72,6 +72,7 @@ export const useAuthStore = create<AuthState>()(
       error: null,
 
       setTokens: (accessToken: string, refreshToken: string) => {
+        apiClient.setTokens(accessToken, refreshToken);
         set({ accessToken, refreshToken, isAuthenticated: true });
       },
 
@@ -96,6 +97,7 @@ export const useAuthStore = create<AuthState>()(
           }
 
           const data = await response.json();
+          apiClient.setTokens(data.access_token, data.refresh_token);
           set({
             user: data.user,
             accessToken: data.access_token,
@@ -124,6 +126,32 @@ export const useAuthStore = create<AuthState>()(
           }
 
           const result = await response.json();
+          // Registration is pending. Do not log the user in.
+          set({
+            isLoading: false,
+          });
+        } catch (err: any) {
+          set({ isLoading: false, error: err.message });
+          throw err;
+        }
+      },
+
+      verifyEmail: async (email: string, otp: string) => {
+        set({ isLoading: true, error: null });
+        try {
+          const response = await fetch(`${API_URL}/auth/verify-email`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, otp }),
+          });
+
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error?.message || 'Verification failed');
+          }
+
+          const result = await response.json();
+          apiClient.setTokens(result.access_token, result.refresh_token);
           set({
             user: result.user,
             accessToken: result.access_token,
@@ -137,37 +165,15 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      verifyEmail: async (token: string) => {
+      resendVerification: async (email: string) => {
         set({ isLoading: true, error: null });
         try {
-          const response = await fetch(`${API_URL}/auth/verify-email`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token }),
-          });
-
-          if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error?.message || 'Verification failed');
-          }
-        } catch (err: any) {
-          set({ isLoading: false, error: err.message });
-          throw err;
-        }
-      },
-
-      resendVerification: async () => {
-        set({ isLoading: true, error: null });
-        try {
-          const accessToken = get().accessToken;
-          if (!accessToken) throw new Error('Not authenticated');
-
           const response = await fetch(`${API_URL}/auth/verify-email/resend`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              Authorization: `Bearer ${accessToken}`,
             },
+            body: JSON.stringify({ email }),
           });
 
           if (!response.ok) {
@@ -190,10 +196,14 @@ export const useAuthStore = create<AuthState>()(
                 'Content-Type': 'application/json',
                 Authorization: `Bearer ${accessToken}`,
               },
-              body: JSON.stringify({ refresh_token: refreshToken }),
+              body: JSON.stringify({ refreshToken }),
             });
           }
         } finally {
+          apiClient.clearTokens();
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('auth-storage');
+          }
           set({
             user: null,
             accessToken: null,
@@ -211,7 +221,7 @@ export const useAuthStore = create<AuthState>()(
           const response = await fetch(`${API_URL}/auth/refresh`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ refresh_token: refreshToken }),
+            body: JSON.stringify({ refreshToken }),
           });
 
           if (!response.ok) {
@@ -219,6 +229,7 @@ export const useAuthStore = create<AuthState>()(
           }
 
           const data = await response.json();
+          apiClient.setTokens(data.access_token, data.refresh_token);
           set({
             accessToken: data.access_token,
             refreshToken: data.refresh_token,

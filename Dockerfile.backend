@@ -1,0 +1,43 @@
+# MeritView Backend Dockerfile
+# Multi-stage build: base -> deps -> dev -> builder -> runner
+# Target selection via BACKEND_TARGET (dev | runner)
+
+FROM node:22-alpine AS base
+RUN apk add --no-cache openssl
+RUN npm install -g pnpm
+WORKDIR /app
+
+FROM base AS deps
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN pnpm install --frozen-lockfile --ignore-scripts && pnpm rebuild @prisma/engines bcrypt esbuild @sentry/profiling-node msgpackr-extract puppeteer prisma @prisma/client
+COPY prisma ./prisma
+RUN pnpm prisma generate
+COPY tsconfig.json ./
+
+FROM deps AS dev
+ENV NODE_ENV=development
+COPY . .
+EXPOSE 3001
+CMD ["sh", "-c", "npx prisma db push --accept-data-loss && pnpm dev"]
+
+FROM deps AS builder
+COPY . .
+RUN pnpm build
+
+FROM base AS runner
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001 -G nodejs
+RUN apk add --no-cache chromium nss freetype harfbuzz ca-certificates
+ENV NODE_ENV=production
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/package.json ./package.json
+RUN pnpm prisma generate
+EXPOSE 3001
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3001/health', (r) => { process.exit(r.statusCode === 200 ? 0 : 1) })"
+USER nodejs
+CMD ["sh", "-c", "pnpm prisma migrate deploy && node dist/index.js"]
