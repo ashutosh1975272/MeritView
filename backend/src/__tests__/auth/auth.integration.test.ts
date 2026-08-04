@@ -8,6 +8,7 @@ import { errorHandler } from '../../middleware/error';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { redis } from '../../config/redis';
+import { getEnv } from '../../config/env';
 
 vi.mock('../../config/env', () => ({
   getEnv: () => ({
@@ -150,8 +151,8 @@ describe('Auth Integration Tests', () => {
 
       expect(response.body.user).toBeDefined();
       expect(response.body.user.email).toBe(testEmail);
-      expect(response.body.accessToken).toBeDefined();
-      expect(response.body.refreshToken).toBeDefined();
+      expect(response.body.access_token).toBeDefined();
+      expect(response.body.refresh_token).toBeDefined();
     });
 
     it('should reject wrong password', async () => {
@@ -196,11 +197,11 @@ describe('Auth Integration Tests', () => {
         },
       });
 
-      accessToken = jwt.sign(
-        { userId: user.id, email: user.email, accountType: user.accountType, type: 'access' },
-        process.env.JWT_SECRET!,
-        { expiresIn: '15m', issuer: 'meritview', audience: 'meritview-api' }
-      );
+       accessToken = jwt.sign(
+         { userId: user.id, email: user.email, accountType: user.accountType, type: 'access' },
+         getEnv().JWT_SECRET,
+         { expiresIn: '15m', issuer: 'meritview', audience: 'meritview-api' }
+       );
     });
 
     afterAll(async () => {
