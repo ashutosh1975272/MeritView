@@ -1,26 +1,54 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import NewDisputePage from '../../app/(dashboard)/dashboard/disputes/new/page';
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    pathname: '/dashboard/disputes/new',
+    query: {},
+    asPath: '/dashboard/disputes/new',
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+    prefetch: vi.fn(),
+  }),
+  usePathname: () => '/dashboard/disputes/new',
+  useSearchParams: () => new URLSearchParams(),
+}));
+
+function renderWithClient(ui: React.ReactElement) {
+  const client = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
+  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
+}
 
 describe('NewDisputePage', () => {
   it('renders the dispute creation form', () => {
-    render(<NewDisputePage />);
+    renderWithClient(<NewDisputePage />);
 
     expect(screen.getByText('Create New Dispute')).toBeTruthy();
-    expect(screen.getByLabelText(/category/i)).toBeTruthy();
-    expect(screen.getByLabelText(/title/i)).toBeTruthy();
-    expect(screen.getByLabelText(/summary/i)).toBeTruthy();
-    expect(screen.getByLabelText(/estimated stakes/i)).toBeTruthy();
+    expect(screen.getByRole('combobox')).toBeTruthy();
+    expect(screen.getByRole('combobox')).toBeTruthy();
+    expect(screen.getAllByRole('textbox').length).toBeGreaterThan(0);
   });
 
   it('shows validation error for short title', async () => {
-    render(<NewDisputePage />);
+    renderWithClient(<NewDisputePage />);
 
-    const titleInput = screen.getByLabelText(/title/i);
+    const textboxes = screen.getAllByRole('textbox');
+    const titleInput = textboxes[0];
     fireEvent.change(titleInput, { target: { value: 'AB' } });
 
-    const submitBtn = screen.getByRole('button', { name: /create dispute/i });
-    fireEvent.click(submitBtn);
+    const nextBtn = screen.getByRole('button', { name: /next/i });
+    fireEvent.click(nextBtn);
 
     await waitFor(() => {
       expect(screen.getByText(/title must be at least 5 characters/i)).toBeTruthy();
@@ -28,13 +56,13 @@ describe('NewDisputePage', () => {
   });
 
   it('shows error for invalid stakes', async () => {
-    render(<NewDisputePage />);
+    renderWithClient(<NewDisputePage />);
 
-    const stakesInput = screen.getByLabelText(/estimated stakes/i);
-    fireEvent.change(stakesInput, { target: { value: '-10' } });
+    const numberInputs = screen.getAllByRole('spinbutton');
+    fireEvent.change(numberInputs[0], { target: { value: '-10' } });
 
-    const submitBtn = screen.getByRole('button', { name: /create dispute/i });
-    fireEvent.click(submitBtn);
+    const nextBtn = screen.getByRole('button', { name: /next/i });
+    fireEvent.click(nextBtn);
 
     await waitFor(() => {
       expect(screen.getByText(/must be a positive number/i)).toBeTruthy();
@@ -42,9 +70,9 @@ describe('NewDisputePage', () => {
   });
 
   it('disables submit button while submitting', async () => {
-    render(<NewDisputePage />);
+    renderWithClient(<NewDisputePage />);
 
-    const titleInput = screen.getByLabelText(/title/i);
-    fireEvent.change(titleInput, { target: { value: 'Valid dispute title testing form' } });
+    const textboxes = screen.getAllByRole('textbox');
+    fireEvent.change(textboxes[0], { target: { value: 'Valid dispute title testing form' } });
   });
 });

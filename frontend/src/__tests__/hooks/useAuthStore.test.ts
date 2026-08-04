@@ -20,10 +20,10 @@ describe('useAuthStore', () => {
     expect(state.refreshToken).toBe('ref_1');
   });
 
-  it('clears user on logout', () => {
+  it('clears user on logout', async () => {
     useAuthStore.getState().setUser({ id: 'user_1', email: 'test@example.com', emailVerified: true, role: 'STANDARD' });
     useAuthStore.getState().setTokens('acc_1', 'ref_1');
-    useAuthStore.getState().logout();
+    await useAuthStore.getState().logout();
 
     const state = useAuthStore.getState();
     expect(state.user).toBeNull();
