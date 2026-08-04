@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { acceptInvitation, createInvitation, declineInvitation, getInvitationStatus } from '../../services/invitations';
 import { prisma } from '../../db/prisma';
-import { BadRequestError, NotFoundError, ConflictError, ForbiddenError } from '../../utils/errors';
+import { BadRequestError, NotFoundError, ConflictError, ForbiddenError, ValidationError } from '../../utils/errors';
 
 vi.mock('../../db/prisma', () => {
   const mockPrisma = {
@@ -101,7 +101,7 @@ describe('Invitations Service', () => {
         accountType: 'GUEST',
       });
 
-      const result = await acceptInvitation('valid_token', 'Guest Respondent');
+      const result = await acceptInvitation('valid_token', 'Guest Respondent', undefined, true);
 
       expect(prisma.user.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
@@ -119,7 +119,7 @@ describe('Invitations Service', () => {
       (prisma.party.findUnique as any).mockResolvedValue(mockParty);
       (prisma.user.findUnique as any).mockResolvedValue(null);
 
-      await expect(acceptInvitation('valid_token')).rejects.toThrow(BadRequestError);
+      await expect(acceptInvitation('valid_token')).rejects.toThrow(ValidationError);
     });
 
     it('should throw error for expired invitation', async () => {

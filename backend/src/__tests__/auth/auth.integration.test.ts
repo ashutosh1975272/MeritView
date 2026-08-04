@@ -16,7 +16,7 @@ vi.mock('../../config/env', () => ({
     JWT_REFRESH_EXPIRY: '7d',
     ENCRYPTION_KEY: 'test-encryption-key-that-is-exactly-64-characters-long-for-testing_',
     FROM_EMAIL: 'test@meritview.app',
-    DATABASE_URL: 'postgresql://postgres:postgres@localhost:5432/meritview_test',
+    DATABASE_URL: 'postgresql://postgres:postgres@localhost:5433/meritview',
     REDIS_URL: 'redis://localhost:6379',
     STRIPE_SECRET_KEY: '',
     STRIPE_WEBHOOK_SECRET: '',
