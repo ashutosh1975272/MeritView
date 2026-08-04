@@ -6,6 +6,7 @@ import { logger } from '../../utils/logger';
 import { addEmailJob } from '../../jobs/queues';
 import { generateId } from '../../utils/id';
 import { validateTransition } from '../disputes/state-machine';
+import { generateTokenPair, storeRefreshToken } from '../auth';
 
 const INVITATION_EXPIRY_DAYS = 7;
 
@@ -55,8 +56,9 @@ export async function createInvitation(
     throw new ForbiddenError('Only the dispute initiator can send invitations');
   }
 
-  if (dispute.state !== 'DRAFT') {
-    throw new ConflictError('Can only invite counterparty while dispute is in DRAFT state');
+  const invitableStates = ['PAYMENT_PENDING', 'AWAITING_BRIEFS', 'AWAITING_COUNTERPARTY', 'AWAITING_COUNTERPARTY_BRIEF'];
+  if (!invitableStates.includes(dispute.state)) {
+    throw new ConflictError(`Can only invite counterparty before analysis starts. Current state: ${dispute.state}`);
   }
 
   if (dispute.parties.length > 0) {
@@ -73,6 +75,11 @@ export async function createInvitation(
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + INVITATION_EXPIRY_DAYS);
 
+  const paidPayment = await prisma.payment.findFirst({
+    where: { disputeId, status: 'SUCCEEDED' },
+  });
+  const shouldSendNow = Boolean(paidPayment);
+
   const party = await prisma.party.create({
     data: {
       id: generateId('party'),
@@ -82,27 +89,31 @@ export async function createInvitation(
       invitationEmail: email,
       invitationToken: token,
       invitationStatus: 'PENDING',
-      invitationSentAt: new Date(),
+      invitationSentAt: shouldSendNow ? new Date() : null,
       invitationExpiresAt: expiresAt,
       briefStatus: 'NOT_STARTED',
     },
   });
 
-  await prisma.dispute.update({
-    where: { id: disputeId },
-    data: {
-      state: 'AWAITING_COUNTERPARTY',
-      stateChangedAt: new Date(),
-    },
-  });
+  if (shouldSendNow && dispute.state !== 'AWAITING_COUNTERPARTY') {
+    await prisma.dispute.update({
+      where: { id: disputeId },
+      data: {
+        state: 'AWAITING_COUNTERPARTY',
+        stateChangedAt: new Date(),
+      },
+    });
+  }
 
-  await addEmailJob('invitation-sent', email, {
-    disputeId,
-    disputeTitle: dispute.title,
-    inviterName: dispute.initiator.displayName || 'Someone',
-    token,
-    expiresAt: expiresAt.toISOString(),
-  });
+  if (shouldSendNow) {
+    await addEmailJob('invitation-sent', email, {
+      disputeId,
+      disputeTitle: dispute.title,
+      inviterName: dispute.initiator.displayName || 'Someone',
+      token,
+      expiresAt: expiresAt.toISOString(),
+    });
+  }
 
   await createInvitationEvent(party.id, 'SENT', { disputeId, email });
 
@@ -180,6 +191,10 @@ export async function acceptInvitation(
       });
       logger.info('User account created on invitation accept', { userId: user.id, email: user.email });
     } else {
+      if (!acceptTerms) {
+        throw new ValidationError('Terms must be accepted');
+      }
+
       if (!displayName) {
         throw new BadRequestError('No account found for the invited email. Please register first, provide a displayName to create a guest account, or use createAccount.');
       }
@@ -199,6 +214,8 @@ export async function acceptInvitation(
 
   const now = new Date();
 
+  const nextDisputeState = party.dispute.state === 'PAYMENT_PENDING' ? 'PAYMENT_PENDING' : 'AWAITING_BRIEFS';
+
   await prisma.$transaction([
     prisma.party.update({
       where: { id: party.id },
@@ -211,7 +228,7 @@ export async function acceptInvitation(
     prisma.dispute.update({
       where: { id: party.disputeId },
       data: {
-        state: 'AWAITING_BRIEFS',
+        state: nextDisputeState,
         stateChangedAt: now,
       },
     }),
@@ -226,9 +243,27 @@ export async function acceptInvitation(
 
   logger.info('Invitation accepted', { disputeId: party.disputeId, token: token.substring(0, 8) + '...', userId: user.id });
 
+  const tokens = generateTokenPair({
+    id: user.id,
+    email: user.email,
+    accountType: user.accountType,
+  });
+
+  await storeRefreshToken(user.id, tokens.refreshToken);
+
   return {
     disputeId: party.disputeId,
     userId: user.id,
+    user: {
+      id: user.id,
+      email: user.email,
+      displayName: user.displayName,
+      role: user.accountType,
+      emailVerified: user.emailVerified,
+    },
+    access_token: tokens.accessToken,
+    refresh_token: tokens.refreshToken,
+    expires_in: tokens.expiresIn,
     message: 'Invitation accepted',
   };
 }
@@ -393,6 +428,7 @@ export async function getInvitationStatus(disputeId: string) {
           id: true,
           invitationEmail: true,
           invitationStatus: true,
+          invitationToken: true,
           invitationSentAt: true,
           invitationExpiresAt: true,
           invitationAcceptedAt: true,
@@ -431,6 +467,7 @@ export async function getInvitationStatus(disputeId: string) {
     sentAt: respondentParty.invitationSentAt,
     expiresAt: respondentParty.invitationExpiresAt,
     acceptedAt: respondentParty.invitationAcceptedAt,
+    token: respondentParty.invitationToken,
     disputeId,
   };
 }

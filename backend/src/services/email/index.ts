@@ -1,4 +1,4 @@
-import { getTransporter, getFromAddress } from '../../config/email';
+import { getTransporter, getFromAddress, getFromName } from '../../config/email';
 import { logger } from '../../utils/logger';
 import {
   verificationEmail,
@@ -33,10 +33,11 @@ const deliveryMetrics = {
 export async function sendEmail(to: string, subject: string, html: string, text?: string): Promise<void> {
   const transporter = getTransporter();
   const from = getFromAddress();
+  const fromName = getFromName();
 
   try {
     const info = await transporter.sendMail({
-      from: `"MeritView" <${from}>`,
+      from: `"${fromName}" <${from}>`,
       to,
       subject,
       html,

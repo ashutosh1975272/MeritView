@@ -12,7 +12,7 @@ export interface RoutedProvider {
 
 const DEFAULT_ROUTES: Record<string, string> = {
   evaluation: 'groq/llama-3.3-70b-versatile',
-  aggregation: 'gemini/gemini-1.5-pro',
+  aggregation: 'groq/llama-3.3-70b-versatile',
   'brief-prep': 'groq/llama-3.1-8b-instant',
 };
 

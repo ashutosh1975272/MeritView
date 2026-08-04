@@ -17,7 +17,7 @@ export default function TermsPage() {
         <section className="space-y-3">
           <h2 className="text-lg font-semibold text-foreground">2. Description of Service</h2>
           <p>
-            MeritView provides AI-powered decision support for contract disputes. The Service generates structured analysis of dispute briefs using multiple AI models. MeritView is a decision support tool and does not provide legal advice, legal representation, or any form of legal services.
+            MeritView provides AI-powered decision support for contract, small claims, and partnership disputes. The Service generates structured analysis of dispute briefs using multiple AI models. MeritView is a decision support tool and does not provide legal advice, legal representation, or any form of legal services.
           </p>
         </section>
 
@@ -53,7 +53,7 @@ export default function TermsPage() {
         <section className="space-y-3">
           <h2 className="text-lg font-semibold text-foreground">6. Fees and Payment</h2>
           <p>
-            The current fee for analysis is $49 USD per dispute, unless otherwise specified. Fees are non-refundable except as expressly stated in our refund policy. We reserve the right to change fees with 30 days notice.
+            Standard analysis is currently $99 USD per dispute, with premium tiers available unless otherwise specified. Fees are non-refundable except as expressly stated in our refund policy. We reserve the right to change fees with 30 days notice.
           </p>
         </section>
 

@@ -7,7 +7,8 @@ import { loadStripe, StripeElementsOptions } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { apiClient } from '@/lib/api-client';
 
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PK || 'pk_test_placeholder');
+const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PK;
+const stripePromise = stripePublishableKey ? loadStripe(stripePublishableKey) : null;
 
 function PaymentForm({ disputeId, amount, onSuccess, onError }: {
   disputeId: string;
@@ -29,7 +30,7 @@ function PaymentForm({ disputeId, amount, onSuccess, onError }: {
     const { error, paymentIntent } = await stripe.confirmPayment({
       elements,
       confirmParams: {
-        return_url: `${window.location.origin}/dashboard/disputes/${disputeId}/analysis`,
+        return_url: `${window.location.origin}/dashboard/disputes/${disputeId}`,
       },
       redirect: 'if_required',
     });
@@ -60,7 +61,7 @@ function PaymentForm({ disputeId, amount, onSuccess, onError }: {
         disabled={!stripe || isProcessing}
         className="w-full px-6 py-3 bg-primary text-primary-foreground font-medium rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
-        {isProcessing ? 'Processing Payment...' : `Pay $${(amount / 100).toFixed(2)}`}
+        {isProcessing ? 'Processing Payment...' : `Pay $${(amount / 100).toFixed(2)} & Continue`}
       </button>
     </form>
   );
@@ -72,7 +73,7 @@ export default function PaymentPage() {
   const disputeId = params.id as string;
 
   const [clientSecret, setClientSecret] = useState<string | null>(null);
-  const [amount, setAmount] = useState<number>(4900);
+  const [amount, setAmount] = useState<number>(9900);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -83,8 +84,8 @@ export default function PaymentPage() {
     setError(null);
     try {
       const result = await apiClient.createPaymentIntent(disputeId);
-      setClientSecret(result.clientSecret);
-      setAmount(result.amount);
+      setClientSecret(result.clientSecret || result.client_secret || result.payment_intent?.client_secret || null);
+      setAmount(result.amount ?? 9900);
     } catch (err: any) {
       setError(err.message || 'Failed to initialize payment');
     } finally {
@@ -99,7 +100,7 @@ export default function PaymentPage() {
   const handleSuccess = () => {
     setSuccess(true);
     setTimeout(() => {
-      router.push(`/dashboard/disputes/${disputeId}/analysis`);
+      router.push(`/dashboard/disputes/${disputeId}`);
     }, 2000);
   };
 
@@ -116,12 +117,12 @@ export default function PaymentPage() {
           </svg>
         </div>
         <h1 className="text-2xl font-bold mb-2">Payment Successful!</h1>
-        <p className="text-muted-foreground mb-6">Your analysis is now being processed.</p>
+        <p className="text-muted-foreground mb-6">Your dispute workflow is active. Analysis will begin after both briefs are submitted.</p>
         <div className="animate-pulse">
           <div className="h-2 bg-gray-200 rounded w-3/4 mx-auto mb-2" />
           <div className="h-2 bg-gray-200 rounded w-1/2 mx-auto" />
         </div>
-        <p className="text-sm text-muted-foreground mt-4">Redirecting to analysis page...</p>
+        <p className="text-sm text-muted-foreground mt-4">Redirecting to dispute page...</p>
       </div>
     );
   }
@@ -144,7 +145,7 @@ export default function PaymentPage() {
     appearance: {
       theme: 'stripe',
       variables: {
-        colorPrimary: '#0ea5e9',
+        colorPrimary: '#3b82f6',
       },
     },
   };
@@ -160,17 +161,21 @@ export default function PaymentPage() {
         </Link>
         <h1 className="text-2xl font-bold mt-4">Complete Payment</h1>
         <p className="text-muted-foreground mt-1">
-          Pay ${(amount / 100).toFixed(2)} to analyze your dispute
+          Pay ${(amount / 100).toFixed(2)} to activate your dispute workflow
         </p>
       </div>
 
       <div className="bg-white border border-border rounded-lg p-6">
         <div className="flex items-center justify-between mb-6 pb-4 border-b border-border">
-          <span className="font-medium">Dispute Analysis</span>
+          <span className="font-medium">Dispute Workflow</span>
           <span className="text-xl font-bold">${(amount / 100).toFixed(2)}</span>
         </div>
 
-        {clientSecret ? (
+        {!stripePublishableKey ? (
+          <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+            Payment provider is not configured. Add NEXT_PUBLIC_STRIPE_PK to the frontend environment.
+          </div>
+        ) : clientSecret ? (
           <Elements stripe={stripePromise} options={options}>
             <PaymentForm
               disputeId={disputeId}
@@ -203,7 +208,7 @@ export default function PaymentPage() {
         <p className="text-xs text-muted-foreground">
           Your payment is processed securely via Stripe.
           <br />
-          By completing this payment, you agree to our Terms of Service.
+          By completing this payment, you agree to our Terms of Service. This is decision support, not legal advice.
         </p>
       </div>
     </div>

@@ -1,46 +1,42 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useState, useEffect, useCallback } from 'react';
+import { useParams } from 'next/navigation';
 import { useAuthStore } from '@/stores/useAuthStore';
 
-interface OpinionContent {
-  ruling: string;
-  reasoning: string;
-  strengths: Array<{ party: string; argument: string; weight: number }>;
-  weaknesses: Array<{ party: string; argument: string; weight: number }>;
-  applicableLaw: string;
-  decision: string;
-  confidenceScore: number;
+interface PartyAnalysis {
+  strongest_arguments: string[];
+  weakest_points: string[];
+  factual_concerns: string[];
 }
 
-interface OpinionResponse {
+interface ConfidenceIndicators {
+  overall_confidence: number;
+  evaluator_agreement: number | null;
+}
+
+interface SuggestedConsiderations {
+  party_a: string[];
+  party_b: string[];
+}
+
+interface RestructuredOpinion {
   id: string;
-  disputeId: string;
-  content: OpinionContent;
-  evalPromptVersion: string;
-  aggPromptVersion: string;
-  evaluatorOutputIds: string[];
-  interEvaluatorAgreement: number | null;
-  overallConfidence: number | null;
-  aggregatorProvider: string;
-  aggregatorModelId: string;
-  totalCostUsd: number;
-  pdfStorageKey: string | null;
-  pdfGeneratedAt: string | null;
+  dispute_id: string;
+  generated_at: string;
+  prompt_version: string;
+  evaluators_used: string[];
+  executive_summary: string;
+  key_issues: Array<{ issue: string; agreement_level: string }>;
+  party_a_analysis: PartyAnalysis;
+  party_b_analysis: PartyAnalysis;
+  comparative_assessment: string;
+  confidence_indicators: ConfidenceIndicators;
+  suggested_considerations: SuggestedConsiderations;
   disclaimers: string[];
-  createdAt: string;
-  deliveredAt: string | null;
 }
 
-interface OpinionStatus {
-  disputeId: string;
-  status: 'pending' | 'delivered' | 'error';
-  deliveredAt: string | null;
-  pdfAvailable: boolean;
-}
-
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_ROOT = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001').replace(/\/v1\/?$/, '');
 
 function formatConfidence(score: number): string {
   return `${(score * 100).toFixed(0)}%`;
@@ -63,74 +59,44 @@ function Disclaimers({ disclaimers }: { disclaimers: string[] }) {
           <li key={i} className="text-xs text-yellow-700">{d}</li>
         ))}
       </ol>
+      <p className="text-xs text-yellow-800 font-bold mt-3">This is an AI-generated decision support tool, not legal advice.</p>
     </div>
   );
 }
 
-function OpinionContent({ content }: { content: OpinionContent }) {
+function PartyAnalysisPanel({ title, analysis, color }: { title: string, analysis: PartyAnalysis, color: 'blue' | 'purple' }) {
+  const bg = color === 'blue' ? 'bg-blue-50 border-blue-200' : 'bg-purple-50 border-purple-200';
+  const textTitle = color === 'blue' ? 'text-blue-800' : 'text-purple-800';
+
   return (
-    <div className="space-y-6">
-      <div className="p-4 border border-primary/20 bg-primary/5 rounded-lg">
-        <h2 className="font-semibold mb-2">Ruling</h2>
-        <p>{content.ruling}</p>
+    <div className={`p-5 rounded-lg border ${bg} space-y-4`}>
+      <h3 className={`font-semibold ${textTitle}`}>{title}</h3>
+      
+      <div>
+        <h4 className="text-sm font-semibold text-green-700 mb-1">Strongest Arguments</h4>
+        {analysis.strongest_arguments.length > 0 ? (
+          <ul className="list-disc ml-5 space-y-1">
+            {analysis.strongest_arguments.map((arg, i) => <li key={i} className="text-sm text-foreground">{arg}</li>)}
+          </ul>
+        ) : <p className="text-sm text-muted-foreground">None identified</p>}
       </div>
 
       <div>
-        <h2 className="font-semibold mb-2">Reasoning</h2>
-        <p className="text-muted-foreground">{content.reasoning}</p>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <div>
-          <h3 className="font-semibold mb-2 text-green-700">Strengths</h3>
-          {content.strengths.length > 0 ? (
-            <ul className="space-y-2">
-              {content.strengths.map((s, i) => (
-                <li key={i} className="p-3 border border-green-200 bg-green-50 rounded-lg text-sm">
-                  <span className="font-medium capitalize">{s.party}:</span> {s.argument}
-                  <div className="text-xs text-muted-foreground mt-1">Weight: {s.weight}</div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-muted-foreground">None identified</p>
-          )}
-        </div>
-
-        <div>
-          <h3 className="font-semibold mb-2 text-red-700">Weaknesses</h3>
-          {content.weaknesses.length > 0 ? (
-            <ul className="space-y-2">
-              {content.weaknesses.map((w, i) => (
-                <li key={i} className="p-3 border border-red-200 bg-red-50 rounded-lg text-sm">
-                  <span className="font-medium capitalize">{w.party}:</span> {w.argument}
-                  <div className="text-xs text-muted-foreground mt-1">Weight: {w.weight}</div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-muted-foreground">None identified</p>
-          )}
-        </div>
+        <h4 className="text-sm font-semibold text-red-700 mb-1">Weakest Points</h4>
+        {analysis.weakest_points.length > 0 ? (
+          <ul className="list-disc ml-5 space-y-1">
+            {analysis.weakest_points.map((arg, i) => <li key={i} className="text-sm text-foreground">{arg}</li>)}
+          </ul>
+        ) : <p className="text-sm text-muted-foreground">None identified</p>}
       </div>
 
       <div>
-        <h2 className="font-semibold mb-2">Applicable Law</h2>
-        <p className="text-muted-foreground">{content.applicableLaw}</p>
-      </div>
-
-      <div>
-        <h2 className="font-semibold mb-2">Decision</h2>
-        <p className="text-muted-foreground">{content.decision}</p>
-      </div>
-
-      <div className="flex items-center gap-4 p-4 border rounded-lg bg-card">
-        <div>
-          <span className="text-sm text-muted-foreground">Confidence Score</span>
-          <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium mt-1 ${getConfidenceColor(content.confidenceScore)}`}>
-            {formatConfidence(content.confidenceScore)}
-          </div>
-        </div>
+        <h4 className="text-sm font-semibold text-amber-700 mb-1">Factual Concerns</h4>
+        {analysis.factual_concerns.length > 0 ? (
+          <ul className="list-disc ml-5 space-y-1">
+            {analysis.factual_concerns.map((concern, i) => <li key={i} className="text-sm text-foreground">{concern}</li>)}
+          </ul>
+        ) : <p className="text-sm text-muted-foreground">None identified</p>}
       </div>
     </div>
   );
@@ -138,23 +104,19 @@ function OpinionContent({ content }: { content: OpinionContent }) {
 
 export default function OpinionPage() {
   const params = useParams();
-  const router = useRouter();
   const disputeId = params.id as string;
   const { accessToken } = useAuthStore();
-  const eventSourceRef = useRef<EventSource | null>(null);
 
-  const [opinion, setOpinion] = useState<OpinionResponse | null>(null);
-  const [status, setStatus] = useState<OpinionStatus | null>(null);
+  const [opinion, setOpinion] = useState<RestructuredOpinion | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isPdfLoading, setIsPdfLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showNotification, setShowNotification] = useState(false);
 
   const fetchOpinion = useCallback(async () => {
     if (!accessToken) return;
 
     try {
-      const res = await fetch(`${BASE_URL}/v1/disputes/${disputeId}/opinion`, {
+      const res = await fetch(`${API_ROOT}/v1/disputes/${disputeId}/opinion`, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
@@ -163,287 +125,162 @@ export default function OpinionPage() {
 
       if (res.ok) {
         const data = await res.json();
-        setOpinion(data);
-        setStatus({
-          disputeId,
-          status: 'delivered',
-          deliveredAt: data.deliveredAt,
-          pdfAvailable: !!data.pdfStorageKey,
-        });
-        setShowNotification(true);
-        setTimeout(() => setShowNotification(false), 5000);
-        return data;
-      }
-
-      if (res.status === 404) {
-        return null;
+        setOpinion(data.opinion);
+        return;
       }
 
       const err = await res.json().catch(() => ({ error: { message: 'Failed to load opinion' } }));
       throw new Error(err.error?.message || 'Failed to load opinion');
-    } catch (err) {
-      if (err instanceof Response) return null;
-      throw err;
-    }
-  }, [accessToken, disputeId]);
-
-  const fetchStatus = useCallback(async () => {
-    if (!accessToken) return;
-
-    try {
-      const res = await fetch(`${BASE_URL}/v1/disputes/${disputeId}/opinion/status`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setStatus(data);
-      }
-    } catch {
-      // ignore polling errors
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
     }
   }, [accessToken, disputeId]);
 
   useEffect(() => {
-    if (!accessToken) return;
-
-    fetchOpinion()
-      .then((result) => {
-        if (!result) {
-          return fetchStatus();
-        }
-      })
-      .catch((err) => {
-        setError(err.message);
-      })
-      .finally(() => setIsLoading(false));
-  }, [accessToken, fetchOpinion, fetchStatus]);
-
-  useEffect(() => {
-    if (!accessToken || !disputeId) return;
-
-    const eventSource = new EventSource(
-      `${BASE_URL}/v1/disputes/${disputeId}/opinion/stream?token=${accessToken}`
-    );
-    eventSourceRef.current = eventSource;
-
-    eventSource.addEventListener('status', (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        setStatus(data);
-      } catch {
-        // ignore parse errors
-      }
-    });
-
-    eventSource.addEventListener('pdf-ready', (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        setStatus((prev) => prev ? { ...prev, pdfAvailable: true } : prev);
-      } catch {
-        // ignore parse errors
-      }
-    });
-
-    eventSource.addEventListener('delivered', () => {
-      fetchOpinion().then((result) => {
-        if (result) {
-          setShowNotification(true);
-          setTimeout(() => setShowNotification(false), 5000);
-        }
-      });
-    });
-
-    eventSource.onerror = () => {
-      eventSource.close();
-    };
-
-    return () => {
-      eventSource.close();
-      eventSourceRef.current = null;
-    };
-  }, [accessToken, disputeId, fetchOpinion]);
+    fetchOpinion();
+  }, [fetchOpinion]);
 
   const handlePdfDownload = async () => {
     if (!accessToken) return;
     setIsPdfLoading(true);
 
     try {
-      const res = await fetch(`${BASE_URL}/v1/disputes/${disputeId}/opinion/pdf`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
+      const res = await fetch(`${API_ROOT}/v1/disputes/${disputeId}/opinion/pdf`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
       });
 
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: { message: 'PDF not available' } }));
-        throw new Error(err.error?.message || 'PDF not available');
-      }
+      if (!res.ok) throw new Error('PDF not available');
 
-      const { downloadUrl } = await res.json();
-
-      const pdfRes = await fetch(`${BASE_URL}/storage/${downloadUrl}`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-
-      if (!pdfRes.ok) {
-        throw new Error('Failed to download PDF');
-      }
-
-      const blob = await pdfRes.blob();
+      const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = window.document.createElement('a');
       a.href = url;
       a.download = `opinion-${disputeId}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to download PDF');
+    } catch (err: any) {
+      setError(err.message || 'Failed to download PDF');
     } finally {
       setIsPdfLoading(false);
     }
   };
 
-  return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Opinion of Analysis</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Dispute ID: {disputeId}
-          </p>
+  if (isLoading) {
+    return (
+      <div className="max-w-4xl mx-auto space-y-4 animate-pulse">
+        <div className="h-10 bg-muted rounded w-1/3 mb-8" />
+        <div className="h-24 bg-muted rounded" />
+        <div className="grid grid-cols-2 gap-4">
+          <div className="h-48 bg-muted rounded" />
+          <div className="h-48 bg-muted rounded" />
         </div>
-        <div className="flex items-center gap-3">
-          {status?.status === 'delivered' && (
-            <>
-              {status.pdfAvailable ? (
-                <button
-                  onClick={handlePdfDownload}
-                  disabled={isPdfLoading}
-                  className="inline-flex items-center px-4 py-2 rounded-lg border border-border text-sm font-medium hover:bg-accent transition-colors disabled:opacity-50"
-                >
-                  {isPdfLoading ? (
-                    <>
-                      <span className="w-4 h-4 mr-2 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                      Downloading...
-                    </>
-                  ) : (
-                    <>Download PDF</>
-                  )}
-                </button>
-              ) : (
-                <span className="text-xs text-muted-foreground">PDF not available</span>
-              )}
-            </>
-          )}
+        <div className="h-32 bg-muted rounded" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-4xl mx-auto p-4 rounded-lg bg-red-50 border border-red-200 text-red-700">
+        <h2 className="font-semibold mb-1">Error</h2>
+        <p>{error}</p>
+      </div>
+    );
+  }
+
+  if (!opinion) return null;
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-8 animate-fade-in pb-16">
+      <div className="flex items-center justify-between border-b border-border pb-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Opinion of Analysis</h1>
+          <p className="text-sm text-muted-foreground mt-1">Generated {new Date(opinion.generated_at).toLocaleString()}</p>
+        </div>
+        <button
+          onClick={handlePdfDownload}
+          disabled={isPdfLoading}
+          className="inline-flex items-center px-4 py-2 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+        >
+          {isPdfLoading ? 'Generating PDF...' : 'Download PDF'}
+        </button>
+      </div>
+
+      <Disclaimers disclaimers={opinion.disclaimers} />
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="p-4 rounded-lg bg-card border border-border flex flex-col justify-center items-center">
+          <span className="text-sm text-muted-foreground">Overall Confidence</span>
+          <span className={`text-2xl font-bold mt-1 ${getConfidenceColor(opinion.confidence_indicators.overall_confidence).split(' ')[0]}`}>
+            {formatConfidence(opinion.confidence_indicators.overall_confidence)}
+          </span>
+        </div>
+        <div className="p-4 rounded-lg bg-card border border-border flex flex-col justify-center items-center">
+          <span className="text-sm text-muted-foreground">Evaluator Agreement</span>
+          <span className="text-2xl font-bold mt-1">
+            {opinion.confidence_indicators.evaluator_agreement ? formatConfidence(opinion.confidence_indicators.evaluator_agreement) : 'N/A'}
+          </span>
         </div>
       </div>
 
-      {showNotification && opinion && (
-        <div className="p-4 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm animate-fade-in">
-          Your opinion is now available for review.
-        </div>
-      )}
+      <div className="p-6 rounded-lg bg-primary/5 border border-primary/20">
+        <h2 className="text-xl font-semibold mb-3">Executive Summary</h2>
+        <p className="text-foreground whitespace-pre-wrap">{opinion.executive_summary}</p>
+      </div>
 
-      {error && (
-        <div className="p-4 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
-          {error}
-        </div>
-      )}
-
-      {isLoading && (
-        <div className="space-y-4 animate-pulse">
-          <div className="h-24 bg-gray-200 rounded" />
-          <div className="h-4 bg-gray-200 rounded w-3/4" />
-          <div className="grid grid-cols-2 gap-4">
-            <div className="h-32 bg-gray-200 rounded" />
-            <div className="h-32 bg-gray-200 rounded" />
-          </div>
-          <div className="h-20 bg-gray-200 rounded" />
-        </div>
-      )}
-
-      {!isLoading && !opinion && status?.status === 'pending' && (
-        <div className="p-12 rounded-lg border border-border text-center space-y-4">
-          <div className="flex justify-center">
-            <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-          </div>
-          <h2 className="text-lg font-medium">Opinion Being Generated</h2>
-          <p className="text-sm text-muted-foreground max-w-md mx-auto">
-            Your opinion is being prepared. This typically takes a few moments.
-            You will be notified when it is ready.
-          </p>
-          <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-            <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-            Listening for updates via SSE...
-          </div>
-        </div>
-      )}
-
-      {!isLoading && opinion && (
-        <>
-          <div className="grid gap-4 md:grid-cols-4">
-            <div className="p-3 border rounded-lg bg-card text-center">
-              <div className="text-xs text-muted-foreground">Aggregator</div>
-              <div className="font-medium text-sm mt-1">{opinion.aggregatorProvider}</div>
-              <div className="text-xs text-muted-foreground truncate">{opinion.aggregatorModelId}</div>
-            </div>
-            {opinion.interEvaluatorAgreement !== null && (
-              <div className="p-3 border rounded-lg bg-card text-center">
-                <div className="text-xs text-muted-foreground">Inter-Evaluator Agreement</div>
-                <div className="font-medium text-sm mt-1">{(opinion.interEvaluatorAgreement * 100).toFixed(1)}%</div>
+      <div>
+        <h2 className="text-xl font-semibold mb-3">Key Issues</h2>
+        <div className="space-y-3">
+          {opinion.key_issues.length > 0 ? opinion.key_issues.map((issue, i) => (
+            <div key={i} className="p-4 rounded-lg bg-card border border-border">
+              <div className="flex items-center justify-between gap-3">
+                <p className="font-medium">{issue.issue}</p>
+                <span className="text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground whitespace-nowrap">
+                  {issue.agreement_level} agreement
+                </span>
               </div>
-            )}
-            {opinion.overallConfidence !== null && (
-              <div className="p-3 border rounded-lg bg-card text-center">
-                <div className="text-xs text-muted-foreground">Overall Confidence</div>
-                <div className="font-medium text-sm mt-1">{(opinion.overallConfidence * 100).toFixed(1)}%</div>
-              </div>
-            )}
-            <div className="p-3 border rounded-lg bg-card text-center">
-              <div className="text-xs text-muted-foreground">Total Cost</div>
-              <div className="font-medium text-sm mt-1">${opinion.totalCostUsd.toFixed(2)}</div>
             </div>
-          </div>
-
-          <Disclaimers disclaimers={opinion.disclaimers} />
-
-          <div className="p-3 border rounded-lg bg-card">
-            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-              <span>Eval Prompt: v{opinion.evalPromptVersion}</span>
-              <span>Agg Prompt: v{opinion.aggPromptVersion}</span>
-              <span>{opinion.evaluatorOutputIds.length} evaluator outputs</span>
-              {opinion.createdAt && (
-                <span>Created: {new Date(opinion.createdAt).toLocaleDateString()}</span>
-              )}
-            </div>
-          </div>
-
-          <OpinionContent content={opinion.content} />
-
-          <div className="p-4 border border-yellow-200 bg-yellow-50 rounded-lg">
-            <p className="text-xs text-yellow-700">
-              This opinion was generated on {new Date(opinion.createdAt).toLocaleString()}.
-              {opinion.deliveredAt && ` It was delivered on ${new Date(opinion.deliveredAt).toLocaleString()}.`}
-            </p>
-          </div>
-        </>
-      )}
-
-      {!isLoading && status?.status === 'error' && !opinion && (
-        <div className="p-8 rounded-lg border border-red-200 bg-red-50 text-center">
-          <h2 className="text-lg font-medium text-red-700">Opinion Generation Failed</h2>
-          <p className="text-sm text-red-600 mt-2">
-            There was an error generating the opinion. Please contact support.
-          </p>
+          )) : <p className="text-sm text-muted-foreground">No key issues identified.</p>}
         </div>
-      )}
+      </div>
+
+      <div>
+        <h2 className="text-xl font-semibold mb-3">Comparative Assessment</h2>
+        <div className="p-6 rounded-lg bg-card border border-border">
+          <p className="text-foreground whitespace-pre-wrap">{opinion.comparative_assessment}</p>
+        </div>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <PartyAnalysisPanel title="Party A Analysis" analysis={opinion.party_a_analysis} color="blue" />
+        <PartyAnalysisPanel title="Party B Analysis" analysis={opinion.party_b_analysis} color="purple" />
+      </div>
+
+      <div>
+        <h2 className="text-xl font-semibold mb-3">Suggested Considerations</h2>
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="p-4 rounded-lg bg-card border border-border">
+            <h3 className="font-medium mb-2">For Party A</h3>
+            <ul className="list-disc ml-5 space-y-1">
+              {opinion.suggested_considerations.party_a.map((sg, i) => <li key={i} className="text-sm">{sg}</li>)}
+            </ul>
+          </div>
+          <div className="p-4 rounded-lg bg-card border border-border">
+            <h3 className="font-medium mb-2">For Party B</h3>
+            <ul className="list-disc ml-5 space-y-1">
+              {opinion.suggested_considerations.party_b.map((sg, i) => <li key={i} className="text-sm">{sg}</li>)}
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div className="text-xs text-muted-foreground text-center pt-8 border-t border-border">
+        <p>Evaluators used: {opinion.evaluators_used.length}</p>
+        <p>Prompts: {opinion.prompt_version}</p>
+        <p>Dispute ID: {opinion.dispute_id}</p>
+      </div>
     </div>
   );
 }

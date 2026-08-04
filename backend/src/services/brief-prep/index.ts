@@ -57,6 +57,16 @@ export async function createSession(
     where: { partyId, status: 'ACTIVE' },
   });
   if (existing) {
+    const requestedProvider = llmProvider || existing.llmProvider;
+    const requestedModel = modelPreference || existing.modelId;
+    const sameModelRequested = existing.llmProvider === requestedProvider && existing.modelId === requestedModel;
+
+    if (!sameModelRequested) {
+      await prisma.briefPrepSession.update({
+        where: { id: existing.id },
+        data: { status: 'ABANDONED' },
+      });
+    } else {
     const messages = deserializeMessages(existing.encryptedMessages);
     const apiUrl = env.NEXT_PUBLIC_API_URL;
     const wsProtocol = apiUrl.startsWith('https') ? 'wss' : 'ws';
@@ -77,6 +87,7 @@ export async function createSession(
       },
       initial_message: messages[0]?.content || '',
     };
+    }
   }
 
   let llmProviderValue: string;

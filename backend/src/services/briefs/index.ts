@@ -86,7 +86,12 @@ export async function saveDraft(
     throw new NotFoundError('Dispute not found');
   }
 
-  if (dispute.state !== 'DRAFT' && dispute.state !== 'AWAITING_COUNTERPARTY' && dispute.state !== 'AWAITING_BRIEFS' && dispute.state !== 'AWAITING_COUNTERPARTY_BRIEF') {
+  if (
+    dispute.state !== 'AWAITING_COUNTERPARTY' &&
+    dispute.state !== 'AWAITING_BRIEFS' &&
+    dispute.state !== 'AWAITING_COUNTERPARTY_BRIEF' &&
+    dispute.state !== 'IN_PROGRESS'
+  ) {
     throw new ConflictError('Dispute is not in a state that allows brief editing');
   }
 
@@ -166,7 +171,12 @@ export async function submitBrief(
     throw new NotFoundError('Dispute not found');
   }
 
-  if (dispute.state !== 'DRAFT' && dispute.state !== 'AWAITING_COUNTERPARTY' && dispute.state !== 'AWAITING_BRIEFS' && dispute.state !== 'AWAITING_COUNTERPARTY_BRIEF') {
+  if (
+    dispute.state !== 'AWAITING_COUNTERPARTY' &&
+    dispute.state !== 'AWAITING_BRIEFS' &&
+    dispute.state !== 'AWAITING_COUNTERPARTY_BRIEF' &&
+    dispute.state !== 'IN_PROGRESS'
+  ) {
     throw new ConflictError('Dispute is not in a state that allows brief submission');
   }
 
@@ -273,17 +283,41 @@ export async function submitBrief(
     data: { briefStatus: 'SUBMITTED' },
   });
 
-  const allParties = await prisma.party.findMany({
-    where: { disputeId },
+  const unsubmittedParties = await prisma.party.findMany({
+    where: {
+      disputeId,
+      briefStatus: { not: 'SUBMITTED' },
+    },
+    select: { id: true, role: true },
   });
 
-  const unsubmittedParties = allParties.filter(p => p.briefStatus !== 'SUBMITTED');
-
+  // After ALL parties submit: check payment status then dispatch evaluators
   let newState: DisputeState;
-  if (unsubmittedParties.length === 0) {
-    newState = allParties.length > 1 ? 'AWAITING_BRIEFS' : 'PAYMENT_PENDING';
+  let shouldDispatchEvaluators = false;
+  const allParties = await prisma.party.findMany({
+    where: { disputeId },
+    select: { id: true, role: true, briefStatus: true },
+  });
+  const hasRespondent = allParties.some((p) => p.role === 'RESPONDENT');
+
+  if (!hasRespondent) {
+    newState = 'AWAITING_BRIEFS';
+  } else if (unsubmittedParties.length === 0) {
+    // All parties have submitted their briefs
+    const paidPayment = await prisma.payment.findFirst({
+      where: { disputeId, status: 'SUCCEEDED' },
+    });
+
+    if (paidPayment) {
+      // Payment done + all briefs in → trigger analysis
+      newState = 'UNDER_ANALYSIS';
+      shouldDispatchEvaluators = true;
+    } else {
+      // All briefs in but payment not yet done
+      newState = 'PAYMENT_PENDING';
+    }
   } else {
-    const respondentNotSubmitted = unsubmittedParties.some(p => p.role === 'RESPONDENT');
+    const respondentNotSubmitted = unsubmittedParties.some((p) => p.role === 'RESPONDENT');
     newState = respondentNotSubmitted ? 'AWAITING_COUNTERPARTY_BRIEF' : 'AWAITING_BRIEFS';
   }
 
@@ -314,11 +348,22 @@ export async function submitBrief(
     await addEmailJob('brief-submitted', user.email, { disputeId });
   }
 
-  const nextAction = newState === 'AWAITING_BRIEFS' || newState === 'AWAITING_COUNTERPARTY_BRIEF'
-    ? 'awaiting_counterparty_brief'
-    : newState === 'PAYMENT_PENDING'
-    ? 'proceed_to_payment'
-    : 'awaiting_analysis';
+  // Dispatch evaluators if all conditions met
+  if (shouldDispatchEvaluators) {
+    const { dispatchEvaluators } = await import('../evaluation/index.js');
+    dispatchEvaluators(disputeId).catch((error: Error) => {
+      logger.error('Evaluation dispatch failed after brief submission', error, { disputeId });
+    });
+  }
+
+  const nextAction =
+    newState === 'AWAITING_BRIEFS' && !hasRespondent
+      ? 'invite_counterparty'
+      : newState === 'AWAITING_COUNTERPARTY_BRIEF' || newState === 'AWAITING_BRIEFS'
+      ? 'awaiting_counterparty_brief'
+      : newState === 'PAYMENT_PENDING'
+      ? 'proceed_to_payment'
+      : 'awaiting_analysis';
 
   return {
     brief: {
@@ -368,10 +413,6 @@ export async function getBrief(
     throw new NotFoundError('Party not found in this dispute');
   }
 
-  if (party.userId !== userId) {
-    throw new ForbiddenError('You are not a member of this party');
-  }
-
   const brief = await prisma.brief.findUnique({
     where: { partyId },
   });
@@ -384,9 +425,15 @@ export async function getBrief(
     where: { disputeId },
   });
 
-  const allSubmitted = allParties.every(p => p.briefStatus === 'SUBMITTED');
+  const requesterParty = allParties.find((p) => p.userId === userId);
+  if (!requesterParty) {
+    throw new ForbiddenError('You are not a member of this dispute');
+  }
 
-  if (allParties.length > 1 && !allSubmitted && brief.status !== 'DRAFT') {
+  const isOwnBrief = party.userId === userId;
+  const allSubmitted = allParties.every((p) => p.briefStatus === 'SUBMITTED');
+
+  if (!isOwnBrief && (allParties.length > 1 && !allSubmitted)) {
     throw new NotFoundError('Brief not found');
   }
 

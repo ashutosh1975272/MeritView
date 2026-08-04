@@ -18,11 +18,11 @@ const steps = [
     number: '02',
     title: 'Submit & Pay',
     icon: '🔒',
-    description: 'Once your brief is complete, submit it and pay the flat $49 fee. Your content is encrypted and sealed for immutability. Our system then dispatches your brief to three independent AI models for evaluation.',
+    description: 'After dispute setup, complete payment for your selected tier. Each party then submits a sealed brief. Once both briefs are in, our system dispatches them to multiple independent AI evaluators.',
     details: [
       'Content encrypted with AES-256-GCM',
       'Seal hash created for immutability proof',
-      'Flat $49 fee — no hidden costs',
+      'Standard analysis starts at $99',
       'Secure payment via Stripe',
       'Automatic receipt and invoice',
     ],
@@ -31,9 +31,9 @@ const steps = [
     number: '03',
     title: 'Receive Your Analysis',
     icon: '📊',
-    description: 'Within hours, you will receive a structured opinion with confidence scores, argument analysis, and factual concern flags from three leading AI models, aggregated into a clear, actionable report.',
+    description: 'Within hours, you will receive a structured opinion with confidence scores, argument analysis, and factual concern flags from multiple AI evaluators, aggregated into a clear report.',
     details: [
-      'Three independent AI evaluations',
+      'Multiple independent AI evaluations',
       'Strongest and weakest arguments identified',
       'Factual concerns and gaps flagged',
       'Confidence scores for each assessment',
@@ -50,7 +50,7 @@ export default function HowItWorksPage() {
           How It Works
         </h1>
         <p className="text-xl text-muted-foreground">
-          Get structured, impartial analysis of your contract dispute in three simple steps.
+          Get structured, impartial analysis of your dispute in three simple steps.
           No legal expertise required.
         </p>
       </section>

@@ -57,6 +57,10 @@ export default function InvitePage() {
   }
 
   const inviteStatus = invitation?.status || 'NOT_SENT';
+  const canInvite = dispute && ['PAYMENT_PENDING', 'AWAITING_BRIEFS', 'AWAITING_COUNTERPARTY', 'AWAITING_COUNTERPARTY_BRIEF'].includes(dispute.state);
+  const inviteLink = invitation?.token && typeof window !== 'undefined'
+    ? `${window.location.origin}/invitations/${invitation.token}`
+    : null;
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
@@ -88,6 +92,11 @@ export default function InvitePage() {
           {invitation?.email && (
             <p className="text-sm mt-1">Sent to: {invitation.email}</p>
           )}
+          {inviteLink && (
+            <div className="mt-3 rounded-md bg-white/60 p-2 text-xs break-all">
+              <span className="font-medium">Invite link:</span> {inviteLink}
+            </div>
+          )}
           {inviteStatus === 'ACCEPTED' && (
             <button
               onClick={() => router.push(`/dashboard/disputes/${disputeId}/brief`)}
@@ -99,7 +108,7 @@ export default function InvitePage() {
         </div>
       )}
 
-      {inviteStatus === 'NOT_SENT' && dispute?.state === 'DRAFT' && (
+      {inviteStatus === 'NOT_SENT' && canInvite && (
         <div className="p-6 border border-border rounded-lg bg-card space-y-4">
           <div>
             <label htmlFor="email" className="block text-sm font-medium mb-1">
@@ -143,10 +152,10 @@ export default function InvitePage() {
         </div>
       )}
 
-      {dispute?.state !== 'DRAFT' && inviteStatus === 'NOT_SENT' && (
+      {!canInvite && inviteStatus === 'NOT_SENT' && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-yellow-800">
-          <p className="font-medium">Dispute is not in draft state</p>
-          <p className="text-sm mt-1">Invitations can only be sent when the dispute is in DRAFT state.</p>
+          <p className="font-medium">Invitation is not available in this state</p>
+          <p className="text-sm mt-1">Invitations are available after payment and before analysis completes.</p>
         </div>
       )}
     </div>

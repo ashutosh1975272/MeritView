@@ -65,12 +65,12 @@ export default function BriefAssistPage() {
       setPartyId(myParty.id);
 
       const session = await apiClient.post(
-        `/disputes/${disputeId}/parties/${myParty.id}/brief-prep/session`,
-        {}
+        `/disputes/${disputeId}/parties/${myParty.id}/brief/session`,
+        { llmProvider: 'openai', modelPreference: 'gpt-4o' }
       );
 
-      setSessionId(session.id);
-      setMessages(session.messages || []);
+      setSessionId(session.session.id);
+      setMessages(session.initial_message ? [{ role: 'assistant', content: session.initial_message, timestamp: new Date().toISOString() }] : []);
     } catch (err: any) {
       setError(err.message || 'Failed to initialize session');
     } finally {
@@ -86,7 +86,7 @@ export default function BriefAssistPage() {
 
     try {
       const result = await apiClient.post(
-        `/disputes/${disputeId}/parties/${partyId}/brief-prep/session/${sessionId}/message`,
+        `/disputes/${disputeId}/parties/${partyId}/brief/session/${sessionId}/message`,
         { content: input }
       );
 

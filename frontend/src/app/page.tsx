@@ -27,11 +27,11 @@ export default function LandingPage() {
         <section className="container py-20 px-4 text-center">
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6">
             AI Decision Support for{' '}
-            <span className="text-primary">Contract Disputes</span>
+            <span className="text-primary">Everyday Disputes</span>
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
-            Get structured, impartial analysis of your contract dispute from multiple AI models.
-            $49 flat fee. Decision support, not legal advice.
+            Get structured, impartial analysis of contract, small claims, and partnership disputes from multiple AI models.
+            Standard analysis starts at $99. Decision support, not legal advice.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
@@ -64,7 +64,7 @@ export default function LandingPage() {
                 <div className="text-4xl mb-4">🤖</div>
                 <h3 className="text-xl font-semibold mb-2">2. Multi-Model AI Analysis</h3>
                 <p className="text-muted-foreground">
-                  Three leading AI models (Llama 3 70B, Mixtral 8x7B, Gemini 1.5 Pro) independently evaluate your brief.
+                  A target roster of five diverse AI evaluators independently reviews both submitted briefs.
                 </p>
               </div>
               <div className="text-center p-6">
@@ -89,9 +89,9 @@ export default function LandingPage() {
                 </p>
               </div>
               <div className="p-6">
-                <h3 className="text-lg font-semibold mb-2">Flat $49 Fee</h3>
+                <h3 className="text-lg font-semibold mb-2">Transparent Pricing</h3>
                 <p className="text-muted-foreground">
-                  Transparent pricing with no hidden costs. Pay once, get complete analysis.
+                  Standard analysis starts at $99, with expedited and extended tiers available.
                 </p>
               </div>
               <div className="p-6">

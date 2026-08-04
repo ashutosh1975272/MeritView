@@ -16,7 +16,7 @@ export default function AboutPage() {
         <div className="space-y-4">
           <h2 className="text-2xl font-bold">Our Mission</h2>
           <p className="text-muted-foreground leading-relaxed">
-            Contract disputes are stressful, expensive, and often asymmetrical — one party usually has more resources than the other. MeritView levels the playing field by providing structured, multi-model AI analysis at a flat $49 fee. Our goal is to help you understand the strengths and weaknesses of your position so you can make informed decisions about how to proceed.
+            Everyday disputes are stressful, expensive, and often asymmetrical — one party usually has more resources than the other. MeritView levels the playing field by providing structured, multi-model AI analysis starting at $99. Our goal is to help you understand the strengths and weaknesses of your position so you can make informed decisions about how to proceed.
           </p>
         </div>
 
@@ -26,13 +26,13 @@ export default function AboutPage() {
             <div className="p-6 border border-border rounded-lg bg-card">
               <h3 className="font-semibold mb-2">Multi-Model Analysis</h3>
               <p className="text-sm text-muted-foreground">
-                Unlike single-model tools, we use three leading AI models (Llama 3 70B, Mixtral 8x7B, Gemini 1.5 Pro) to provide independent evaluations, reducing individual model bias.
+                Unlike single-model tools, we target five independent evaluators across multiple model families to reduce individual model bias.
               </p>
             </div>
             <div className="p-6 border border-border rounded-lg bg-card">
-              <h3 className="font-semibold mb-2">Flat $49 Fee</h3>
+              <h3 className="font-semibold mb-2">Transparent Pricing</h3>
               <p className="text-sm text-muted-foreground">
-                No hourly billing, no retainers, no surprise fees. One flat price for a complete analysis, regardless of dispute complexity.
+                No hourly billing, no retainers, no surprise fees. Standard analysis starts at $99, with clear premium tiers for expedited or extended analysis.
               </p>
             </div>
             <div className="p-6 border border-border rounded-lg bg-card">
@@ -93,7 +93,7 @@ export default function AboutPage() {
           </Link>
         </div>
         <p className="text-xs text-muted-foreground">
-          Join hundreds of users who have gained clarity on their contract disputes.
+          Join users seeking structured clarity on contract, small claims, and partnership disputes.
         </p>
       </section>
     </div>

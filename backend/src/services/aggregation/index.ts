@@ -3,7 +3,7 @@ import { logger } from '../../utils/logger';
 import { encrypt } from '../../utils/crypto';
 import { createAuditEvent } from '../../utils/audit';
 import { BadRequestError, NotFoundError, ConflictError } from '../../utils/errors';
-import { AGG_PROMPT_VERSION } from '../../prompts/agg-v2.1';
+import { AGGREGATE_PROMPT_VERSION } from '../../prompts/aggregate-v1.0';
 import { generateId } from '../../utils/id';
 
 const REQUIRED_DISCLAIMERS = [
@@ -161,8 +161,8 @@ export async function generateOpinion(
     throw new NotFoundError('Dispute not found');
   }
 
-  if (dispute.state !== 'COMPLETED') {
-    throw new BadRequestError(`Dispute is in state "${dispute.state}". Only COMPLETED disputes can be aggregated.`);
+  if (dispute.state !== 'UNDER_ANALYSIS' && dispute.state !== 'COMPLETED') {
+    throw new BadRequestError(`Dispute is in state "${dispute.state}". Only UNDER_ANALYSIS disputes can be aggregated.`);
   }
 
   if (dispute.opinions) {
@@ -183,13 +183,33 @@ export async function generateOpinion(
     throw new BadRequestError(`Missing required disclaimers: ${missingDisclaimers.join('; ')}`);
   }
 
-  const fullContent = [
-    opinionData.content,
-    '',
-    '---',
-    'Disclaimers:',
-    ...opinionData.disclaimers,
-  ].join('\n');
+  let fullContent = opinionData.content;
+  try {
+    const parsed = JSON.parse(opinionData.content);
+    const disclaimers = Array.from(new Set([
+      ...(Array.isArray(parsed.disclaimers) ? parsed.disclaimers : []),
+      ...opinionData.disclaimers,
+    ]));
+
+    fullContent = JSON.stringify({
+      ...parsed,
+      disclaimers,
+    });
+  } catch {
+    fullContent = JSON.stringify({
+      executive_summary: opinionData.content,
+      key_issues: [],
+      party_a_analysis: { strongest_arguments: [], weakest_points: [], factual_concerns: [] },
+      party_b_analysis: { strongest_arguments: [], weakest_points: [], factual_concerns: [] },
+      comparative_assessment: opinionData.content,
+      confidence_indicators: {
+        overall_confidence: opinionData.overallConfidence ?? 0.5,
+        evaluator_agreement: opinionData.interEvaluatorAgreement ?? null,
+      },
+      suggested_considerations: { party_a: [], party_b: [] },
+      disclaimers: opinionData.disclaimers,
+    });
+  }
 
   const { encryptedContent, contentEncryptionKeyId } = encrypt(fullContent);
 
@@ -211,13 +231,22 @@ export async function generateOpinion(
         encryptedContent,
         contentEncryptionKeyId,
         evalPromptVersion: dispute.evaluatorOutputs[0]?.promptVersion || 'v3.2',
-        aggPromptVersion: AGG_PROMPT_VERSION,
+        aggPromptVersion: AGGREGATE_PROMPT_VERSION,
         evaluatorOutputIds,
         interEvaluatorAgreement,
         overallConfidence,
         aggregatorProvider: opinionData.aggregatorProvider,
         aggregatorModelId: opinionData.aggregatorModelId,
         totalCostUsd,
+      },
+    });
+
+    await tx.dispute.update({
+      where: { id: disputeId },
+      data: {
+        state: 'COMPLETED',
+        completedAt: new Date(),
+        stateChangedAt: new Date(),
       },
     });
 

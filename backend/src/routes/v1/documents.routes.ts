@@ -2,13 +2,13 @@ import { Router, Response, NextFunction } from 'express';
 import multer from 'multer';
 import { authMiddleware, AuthenticatedRequest } from '../../middleware/auth.js';
 import { createUploadUrl, handleLocalUpload, getDownloadUrl } from '../../services/documents/index.js';
-import { verifyDisputeOwnership } from '../../services/disputes/index.js';
+import { verifyDisputeAccess } from '../../services/disputes/index.js';
 import { processDocumentOcr, getOcrText } from '../../services/documents/ocr.js';
 import { prisma } from '../../db/prisma.js';
 import { NotFoundError, ForbiddenError } from '../../utils/errors.js';
 
 const router: Router = Router();
-const upload = multer(); // Memory storage for local mock
+const upload = multer({ limits: { fileSize: 25 * 1024 * 1024 } }); // Memory storage for local mock
 
 const ALLOWED_MIME_TYPES = [
   'application/pdf',
@@ -18,8 +18,29 @@ const ALLOWED_MIME_TYPES = [
   'image/jpeg',
   'image/png',
   'image/tiff',
+  'image/heic',
+  'image/heif',
   'application/rtf',
 ];
+
+async function assertDocumentAccess(documentId: string, userId: string) {
+  const document = await prisma.document.findUnique({
+    where: { id: documentId },
+    include: { dispute: { select: { initiatorUserId: true, parties: { where: { userId }, select: { id: true } } } } },
+  });
+
+  if (!document || document.deletedAt) {
+    throw new NotFoundError('Document not found');
+  }
+
+  const isInitiator = document.dispute.initiatorUserId === userId;
+  const isParty = document.dispute.parties.length > 0;
+  if (!isInitiator && !isParty) {
+    throw new ForbiddenError('You do not have access to this document');
+  }
+
+  return document;
+}
 
 router.post(
   '/v1/disputes/:disputeId/documents',
@@ -34,7 +55,7 @@ router.post(
       const { disputeId } = req.params;
       const userId = req.user!.id;
 
-      await verifyDisputeOwnership(disputeId, userId);
+      await verifyDisputeAccess(disputeId, userId);
 
       const partyRecord = await prisma.party.findFirst({
         where: { disputeId, userId },
@@ -81,6 +102,7 @@ router.post(
         return res.status(400).json({ error: { message: 'No file uploaded' } });
       }
 
+      await assertDocumentAccess(documentId, req.user!.id);
       await handleLocalUpload(documentId, req.file.buffer);
       res.json({ success: true });
     } catch (error) {
@@ -97,8 +119,8 @@ router.get(
       const { disputeId } = req.params;
       const userId = req.user!.id;
 
-      await verifyDisputeOwnership(disputeId, userId);
-      const documents = await prisma.document.findMany({ where: { disputeId } });
+      await verifyDisputeAccess(disputeId, userId);
+      const documents = await prisma.document.findMany({ where: { disputeId, deletedAt: null } });
       res.json(documents);
     } catch (error) {
       next(error);
@@ -114,21 +136,7 @@ router.get(
       const { documentId } = req.params;
       const userId = req.user!.id;
 
-      const document = await prisma.document.findUnique({
-        where: { id: documentId },
-        include: { dispute: { select: { initiatorUserId: true, parties: { where: { userId }, select: { id: true } } } } },
-      });
-
-      if (!document) {
-        throw new NotFoundError('Document not found');
-      }
-
-      const isInitiator = document.dispute.initiatorUserId === userId;
-      const isParty = document.dispute.parties.length > 0;
-
-      if (!isInitiator && !isParty) {
-        throw new ForbiddenError('You do not have access to this document');
-      }
+      const document = await assertDocumentAccess(documentId, userId);
 
       const { dispute: _dispute, ...docMeta } = document;
       res.json(docMeta);
@@ -144,6 +152,7 @@ router.post(
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const { documentId } = req.params;
+      await assertDocumentAccess(documentId, req.user!.id);
       const result = await processDocumentOcr(documentId);
       res.json({ storageKey: result, status: 'PROCESSING' });
     } catch (error) {
@@ -158,6 +167,7 @@ router.get(
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const { documentId } = req.params;
+      await assertDocumentAccess(documentId, req.user!.id);
       const result = await getOcrText(documentId);
       res.json(result);
     } catch (error) {
@@ -172,6 +182,7 @@ router.get(
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const { documentId } = req.params;
+      await assertDocumentAccess(documentId, req.user!.id);
       const result = await getDownloadUrl(documentId);
       res.json(result);
     } catch (error) {

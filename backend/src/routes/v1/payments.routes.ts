@@ -31,6 +31,10 @@ router.get('/disputes/:disputeId/payment-intent',
         payment_intent: {
           client_secret: paymentIntent.client_secret,
         },
+        clientSecret: paymentIntent.client_secret,
+        paymentIntentId: paymentIntent.id,
+        amount: paymentIntent.amount,
+        currency: paymentIntent.currency,
       });
     } catch (error) {
       next(error);

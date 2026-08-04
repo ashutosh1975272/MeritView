@@ -25,6 +25,7 @@ if (env.SENTRY_DSN) {
   Sentry.init({
     dsn: env.SENTRY_DSN,
     environment: env.NODE_ENV,
+    sendDefaultPii: false,
     tracesSampleRate: env.NODE_ENV === 'production' ? 0.1 : 1.0,
     maxBreadcrumbs: 50,
   });
@@ -78,6 +79,12 @@ app.get('/metrics', metricsEndpoint);
 app.get('/v1/version', (req: Request, res: Response) => {
   res.json({ version: '0.1.0', name: 'MeritView API' });
 });
+
+if (env.NODE_ENV !== 'production') {
+  app.get('/v1/debug/sentry', (_req: Request, _res: Response, next: NextFunction) => {
+    next(new Error(`Sentry backend test error ${new Date().toISOString()}`));
+  });
+}
 
 import os from 'os';
 import path from 'path';

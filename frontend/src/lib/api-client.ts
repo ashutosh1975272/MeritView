@@ -1,4 +1,7 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/v1';
+const RAW_API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/v1';
+const API_URL = RAW_API_URL.replace(/\/$/, '').endsWith('/v1')
+  ? RAW_API_URL.replace(/\/$/, '')
+  : `${RAW_API_URL.replace(/\/$/, '')}/v1`;
 
 class ApiClient {
   private baseUrl: string;
@@ -177,7 +180,7 @@ class ApiClient {
   }
   // Dispute methods
 
-  async getDisputes(): Promise<any[]> {
+  async getDisputes(): Promise<{ data: any[]; nextCursor?: string | null; hasMore?: boolean }> {
     return this.get('/disputes');
   }
 
@@ -190,6 +193,8 @@ class ApiClient {
     title: string;
     summary?: string;
     estimatedStakesUsd?: number;
+    pricingTier?: string;
+    counterparty?: { email: string; display_name_for_invitation: string };
   }): Promise<any> {
     return this.post('/disputes', data);
   }
@@ -210,7 +215,11 @@ class ApiClient {
     return this.put(`/disputes/${disputeId}/parties/${partyId}/brief/draft`, { sections, supportingDocumentIds });
   }
 
-  async submitBrief(disputeId: string, partyId: string, sections: Record<string, string>, supportingDocumentIds?: string[]): Promise<{ id: string; status: string; sealHash: string; wordCount: number }> {
+  async submitBrief(disputeId: string, partyId: string, sections: Record<string, string>, supportingDocumentIds?: string[]): Promise<{
+    brief: { id: string; submitted_at: string; word_count: number; status: string };
+    dispute_state: string;
+    next_action: string;
+  }> {
     return this.post(`/disputes/${disputeId}/parties/${partyId}/brief/submit`, { sections, supportingDocumentIds });
   }
 
@@ -229,7 +238,7 @@ class ApiClient {
     return this.get(`/disputes/${disputeId}/parties/${partyId}/brief`);
   }
 
-  async createPaymentIntent(disputeId: string): Promise<{ clientSecret: string; paymentIntentId: string; amount: number; currency: string }> {
+  async createPaymentIntent(disputeId: string): Promise<{ clientSecret?: string; client_secret?: string; paymentIntentId?: string; amount?: number; currency?: string; payment_intent?: { client_secret?: string } }> {
     return this.get(`/disputes/${disputeId}/payment-intent`);
   }
 
@@ -317,6 +326,10 @@ class ApiClient {
 
   async sendInvitation(disputeId: string, email: string): Promise<{ partyId: string; email: string; status: string; expiresAt: string }> {
     return this.post(`/disputes/${disputeId}/invite`, { email });
+  }
+
+  async resendInvitation(disputeId: string): Promise<{ message?: string }> {
+    return this.post(`/disputes/${disputeId}/re-invite`, {});
   }
 
   async getInvitationStatus(disputeId: string): Promise<{ status: string; email?: string; sentAt?: string; expiresAt?: string; acceptedAt?: string }> {

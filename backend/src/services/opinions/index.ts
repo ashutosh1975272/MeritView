@@ -54,6 +54,13 @@ export interface RestructuredOpinion {
   disclaimers: string[];
 }
 
+interface EvaluatorSummary {
+  id: string;
+  llmProvider: string;
+  modelId: string;
+  parseSuccess: boolean;
+}
+
 async function verifyDisputeOwnership(disputeId: string, userId: string) {
   const dispute = await prisma.dispute.findUnique({
     where: { id: disputeId },
@@ -76,21 +83,48 @@ async function verifyDisputeOwnership(disputeId: string, userId: string) {
 
 function restructureOpinion(
   opinion: { id: string; disputeId: string; evalPromptVersion: string; aggPromptVersion: string; evaluatorOutputIds: string[]; interEvaluatorAgreement: number | null; overallConfidence: number | null; aggregatorProvider: string; aggregatorModelId: string; totalCostUsd: number; pdfStorageKey: string | null; pdfGeneratedAt: Date | null; createdAt: Date; deliveredAt: Date | null },
-  content: OpinionContent
+  content: OpinionContent | Partial<RestructuredOpinion>,
+  evaluatorSummaries: EvaluatorSummary[] = []
 ): RestructuredOpinion {
+  const evaluatorsUsed = evaluatorSummaries.length > 0
+    ? evaluatorSummaries.map((e) => `${e.llmProvider}/${e.modelId}`)
+    : opinion.evaluatorOutputIds;
+
+  if ('executive_summary' in content) {
+    return {
+      id: opinion.id,
+      dispute_id: opinion.disputeId,
+      generated_at: opinion.createdAt.toISOString(),
+      prompt_version: `${opinion.evalPromptVersion} / ${opinion.aggPromptVersion}`,
+      evaluators_used: evaluatorsUsed,
+      executive_summary: content.executive_summary || '',
+      key_issues: content.key_issues || [],
+      party_a_analysis: content.party_a_analysis || { strongest_arguments: [], weakest_points: [], factual_concerns: [] },
+      party_b_analysis: content.party_b_analysis || { strongest_arguments: [], weakest_points: [], factual_concerns: [] },
+      comparative_assessment: content.comparative_assessment || '',
+      confidence_indicators: content.confidence_indicators || {
+        overall_confidence: opinion.overallConfidence ? Number(opinion.overallConfidence) : 0.5,
+        evaluator_agreement: opinion.interEvaluatorAgreement ? Number(opinion.interEvaluatorAgreement) : null,
+      },
+      suggested_considerations: content.suggested_considerations || { party_a: [], party_b: [] },
+      disclaimers: content.disclaimers && content.disclaimers.length > 0 ? content.disclaimers : STANDARD_DISCLAIMERS,
+    };
+  }
+
+  const legacyContent = content as OpinionContent;
   const partyAAnalysis: PartyAnalysis = {
-    strongest_arguments: content.strengths.filter(s => s.party.toLowerCase().includes('a')).map(s => s.argument),
-    weakest_points: content.weaknesses.filter(w => w.party.toLowerCase().includes('a')).map(w => w.argument),
+    strongest_arguments: legacyContent.strengths.filter(s => s.party.toLowerCase().includes('a')).map(s => s.argument),
+    weakest_points: legacyContent.weaknesses.filter(w => w.party.toLowerCase().includes('a')).map(w => w.argument),
     factual_concerns: [],
   };
 
   const partyBAnalysis: PartyAnalysis = {
-    strongest_arguments: content.strengths.filter(s => s.party.toLowerCase().includes('b')).map(s => s.argument),
-    weakest_points: content.weaknesses.filter(w => w.party.toLowerCase().includes('b')).map(w => w.argument),
+    strongest_arguments: legacyContent.strengths.filter(s => s.party.toLowerCase().includes('b')).map(s => s.argument),
+    weakest_points: legacyContent.weaknesses.filter(w => w.party.toLowerCase().includes('b')).map(w => w.argument),
     factual_concerns: [],
   };
 
-  const overallConfidence = opinion.overallConfidence ? Number(opinion.overallConfidence) : content.confidenceScore;
+  const overallConfidence = opinion.overallConfidence ? Number(opinion.overallConfidence) : legacyContent.confidenceScore;
   const interEvaluatorAgreement = opinion.interEvaluatorAgreement ? Number(opinion.interEvaluatorAgreement) : null;
 
   return {
@@ -98,21 +132,21 @@ function restructureOpinion(
     dispute_id: opinion.disputeId,
     generated_at: opinion.createdAt.toISOString(),
     prompt_version: `${opinion.evalPromptVersion} / ${opinion.aggPromptVersion}`,
-    evaluators_used: opinion.evaluatorOutputIds,
-    executive_summary: content.ruling,
+    evaluators_used: evaluatorsUsed,
+    executive_summary: legacyContent.ruling,
     key_issues: [
-      { issue: content.applicableLaw, agreement_level: interEvaluatorAgreement ? `${(interEvaluatorAgreement * 100).toFixed(0)}%` : 'N/A' },
+      { issue: legacyContent.applicableLaw, agreement_level: interEvaluatorAgreement ? `${(interEvaluatorAgreement * 100).toFixed(0)}%` : 'N/A' },
     ],
     party_a_analysis: partyAAnalysis,
     party_b_analysis: partyBAnalysis,
-    comparative_assessment: content.decision,
+    comparative_assessment: legacyContent.decision,
     confidence_indicators: {
       overall_confidence: overallConfidence,
       evaluator_agreement: interEvaluatorAgreement,
     },
     suggested_considerations: {
-      party_a: [content.reasoning],
-      party_b: [content.reasoning],
+      party_a: [legacyContent.reasoning],
+      party_b: [legacyContent.reasoning],
     },
     disclaimers: STANDARD_DISCLAIMERS,
   };
@@ -130,14 +164,25 @@ export async function getOpinion(disputeId: string, userId: string): Promise<{ o
   }
 
   const contentStr = decrypt(opinion.encryptedContent, opinion.contentEncryptionKeyId);
-  let content: OpinionContent;
+  let content: OpinionContent | Partial<RestructuredOpinion>;
   try {
     content = JSON.parse(contentStr) as OpinionContent;
   } catch {
     throw new InternalError('Failed to parse opinion content');
   }
 
-  return { opinion: restructureOpinion(opinion as any, content) };
+  const evaluatorSummaries = await prisma.evaluatorOutput.findMany({
+    where: { id: { in: opinion.evaluatorOutputIds } },
+    select: {
+      id: true,
+      llmProvider: true,
+      modelId: true,
+      parseSuccess: true,
+    },
+    orderBy: { createdAt: 'asc' },
+  });
+
+  return { opinion: restructureOpinion(opinion as any, content, evaluatorSummaries) };
 }
 
 export async function getOpinionStatus(
@@ -233,10 +278,6 @@ export async function getOpinionPdfDownload(
 
   if (!opinion) {
     throw new NotFoundError('Opinion not found');
-  }
-
-  if (opinion.pdfStorageKey && opinion.pdfGeneratedAt) {
-    return { pdf_storage_key: opinion.pdfStorageKey };
   }
 
   const filename = await generateOpinionPdf(disputeId);

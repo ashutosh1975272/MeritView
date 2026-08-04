@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { useAuthStore } from '@/stores/useAuthStore';
 import { apiClient } from '@/lib/api-client';
 
 interface DocumentUploaderProps {
@@ -12,7 +11,6 @@ interface DocumentUploaderProps {
 }
 
 export function DocumentUploader({ disputeId, partyId, isSealed, onUploadComplete }: DocumentUploaderProps) {
-  const { accessToken } = useAuthStore();
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -23,19 +21,26 @@ export function DocumentUploader({ disputeId, partyId, isSealed, onUploadComplet
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 10 * 1024 * 1024) {
-      setError('File size must be less than 10MB');
+    if (file.size > 25 * 1024 * 1024) {
+      setError('File size must be less than 25MB');
       return;
     }
 
     const allowedTypes = [
       'application/pdf',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'application/msword'
+      'application/msword',
+      'text/plain',
+      'image/jpeg',
+      'image/png',
+      'image/tiff',
+      'image/heic',
+      'image/heif',
+      'application/rtf',
     ];
     
     if (!allowedTypes.includes(file.type)) {
-      setError('Only PDF and DOCX files are supported');
+      setError('Only PDF, DOC, DOCX, text, RTF, JPG, PNG, TIFF, or HEIC files are supported');
       return;
     }
 
@@ -44,42 +49,7 @@ export function DocumentUploader({ disputeId, partyId, isSealed, onUploadComplet
     setSuccess(null);
 
     try {
-      // 1. Get Presigned URL (Local Mock URL in this case)
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      const initRes = await fetch(`${baseUrl}/v1/disputes/${disputeId}/documents`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          filename: file.name,
-          mimeType: file.type,
-          sizeBytes: file.size,
-        }),
-      });
-
-      if (!initRes.ok) {
-        throw new Error('Failed to initialize upload');
-      }
-
-      const { uploadUrl, documentId } = await initRes.json();
-
-      // 2. Upload file directly to URL
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const uploadRes = await fetch(`${baseUrl}${uploadUrl}`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: formData,
-      });
-
-      if (!uploadRes.ok) {
-        throw new Error('Failed to upload file');
-      }
+      await apiClient.uploadDocument(disputeId, partyId, file);
 
       setSuccess(`Successfully uploaded ${file.name}`);
       if (onUploadComplete) onUploadComplete();
@@ -90,14 +60,14 @@ export function DocumentUploader({ disputeId, partyId, isSealed, onUploadComplet
       // Reset input
       if (e.target) e.target.value = '';
     }
-  }, [disputeId, partyId, isSealed, accessToken, onUploadComplete]);
+  }, [disputeId, partyId, isSealed, onUploadComplete]);
 
   return (
     <div className="space-y-4 pt-6 mt-6 border-t border-border">
       <div>
         <h3 className="text-lg font-medium">Supporting Evidence</h3>
         <p className="text-sm text-muted-foreground mt-1">
-          Upload PDF or DOCX files to support your arguments (Max 10MB per file).
+          Upload supporting evidence files (Max 25MB per file).
         </p>
       </div>
 
@@ -107,7 +77,7 @@ export function DocumentUploader({ disputeId, partyId, isSealed, onUploadComplet
             <input
               type="file"
               className="hidden"
-              accept=".pdf,.docx,.doc"
+                accept=".pdf,.docx,.doc,.txt,.rtf,.jpg,.jpeg,.png,.tif,.tiff,.heic,.heif"
               onChange={handleFileChange}
               disabled={isUploading}
             />

@@ -31,9 +31,10 @@ model User {
   disputes             Dispute[]       @relation("DisputeInitiator")
   documents            Document[]      @relation("DocumentUploader")
   referralPartnerships MediatorPartnership[] @relation("PartnershipReferral")
-  parties              Party[]         @relation("PartyUser")
-  payments             Payment[]
-  refreshTokens        RefreshToken[]
+  parties Party[] @relation("PartyUser")
+  payments Payment[]
+  refreshTokens RefreshToken[]
+  feedbacks Feedback[]
 
   @@index([email])
   @@index([createdAt], map: "idx_users_created_at")
@@ -61,9 +62,10 @@ model Dispute {
   documents          Document[]
   evaluatorOutputs   EvaluatorOutput[]
   opinions           Opinion?
-  parties            Party[]
-  payments           Payment[]
+  parties Party[]
+  payments Payment[]
   mediatorPartnerships MediatorPartnership[]
+  feedbacks Feedback[]
 
   @@index([initiatorUserId], map: "idx_disputes_initiator")
   @@index([state], map: "idx_disputes_state_active")
@@ -213,8 +215,26 @@ model Document {
   uploadedByUser          User              @relation("DocumentUploader", fields: [uploadedByUserId], references: [id])
 
   @@index([disputeId], map: "idx_documents_dispute")
-  @@index([uploadedByPartyId], map: "idx_documents_party")
-  @@map("documents")
+@@index([uploadedByPartyId], map: "idx_documents_party")
+@@map("documents")
+}
+
+model Feedback {
+  id             String    @id @default(uuid())
+  disputeId      String    @map("dispute_id")
+  userId         String    @map("user_id")
+  rating         Int
+  comment        String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+
+  dispute Dispute @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@index([disputeId], map: "idx_feedback_dispute")
+  @@index([userId], map: "idx_feedback_user")
+  @@map("feedbacks")
 }
 
 model Mediator {

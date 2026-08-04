@@ -9,8 +9,7 @@ export function invitationEmail(
   token: string,
   expiresAt: string
 ): string {
-  const acceptUrl = `${APP_URL}/invitations/${token}/accept`;
-  const declineUrl = `${APP_URL}/invitations/${token}/decline`;
+  const invitationUrl = `${APP_URL}/invitations/${token}`;
   const expiryDate = new Date(expiresAt).toLocaleDateString();
 
   return `
@@ -40,10 +39,10 @@ export function invitationEmail(
       <p><strong>Dispute:</strong> ${disputeTitle}</p>
       <p>MeritView provides AI-powered analysis to help resolve disputes fairly and efficiently. By accepting, you can submit your side of the story and receive an objective assessment.</p>
       <div style="text-align: center; margin: 32px 0;">
-        <a href="${acceptUrl}" class="button">Accept Invitation</a>
+        <a href="${invitationUrl}" class="button">Review Invitation</a>
       </div>
       <p style="text-align: center;">
-        <a href="${declineUrl}" style="color: #6b7280; font-size: 14px;">Decline invitation</a>
+        <a href="${invitationUrl}" style="color: #6b7280; font-size: 14px;">Open invitation details</a>
       </p>
       <p style="font-size: 14px; color: #6b7280;">This invitation expires on ${expiryDate}.</p>
     </div>

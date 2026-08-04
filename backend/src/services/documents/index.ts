@@ -148,15 +148,30 @@ export async function extractText(documentId: string, filePath: string) {
     if (document.mimeType === 'application/pdf') {
       const data = await pdfParse(fileBuffer);
       extractedText = data.text;
-    } else if (
-      document.mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || 
-      document.mimeType === 'application/msword'
-    ) {
-      const result = await mammoth.extractRawText({ buffer: fileBuffer });
-      extractedText = result.value;
-    } else {
-      extractedText = `[File uploaded: ${document.filename}. Text extraction not supported for ${document.mimeType}]`;
+  } else if (
+    document.mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+    document.mimeType === 'application/msword'
+  ) {
+    const result = await mammoth.extractRawText({ buffer: fileBuffer });
+    extractedText = result.value;
+  } else if (
+    document.mimeType === 'image/jpeg' ||
+    document.mimeType === 'image/png' ||
+    document.mimeType === 'image/tiff' ||
+    document.mimeType === 'image/heic' ||
+    document.mimeType === 'image/heif'
+  ) {
+    const { createWorker } = await import('tesseract.js');
+    const worker = await createWorker('eng');
+    try {
+      const { data } = await worker.recognize(filePath);
+      extractedText = data.text;
+    } finally {
+      await worker.terminate();
     }
+  } else {
+    extractedText = `[File uploaded: ${document.filename}. Text extraction not supported for ${document.mimeType}]`;
+  }
 
     // Save extracted text to local mock storage
     const extractedTextStorageKey = `${document.storageKey}_text.txt`;

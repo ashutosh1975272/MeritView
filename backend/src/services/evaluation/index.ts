@@ -71,15 +71,26 @@ interface EvalProvider {
 }
 
 function getEvaluatorProviders(): EvalProvider[] {
+  const MAX_EVALUATORS = 5;
   const providers: EvalProvider[] = [];
-  const names = providerRegistry.getNames();
+  const registered = providerRegistry.getNames()
+    .map((name) => ({ name, provider: providerRegistry.get(name) }))
+    .map(({ name, provider }) => ({ name, provider, models: provider.getCapabilities().supportedModels }));
 
-  for (const name of names) {
-    if (name === 'fallback') continue;
-    const provider = providerRegistry.get(name);
-    const caps = provider.getCapabilities();
-    for (const model of caps.supportedModels) {
-      providers.push({ name, provider, modelId: model });
+  for (const { name, provider, models } of registered) {
+    if (models[0]) {
+      providers.push({ name, provider, modelId: models[0] });
+    }
+    if (providers.length >= MAX_EVALUATORS) break;
+  }
+
+  if (providers.length < MAX_EVALUATORS) {
+    for (const { name, provider, models } of registered) {
+      for (const model of models.slice(1)) {
+        providers.push({ name, provider, modelId: model });
+        if (providers.length >= MAX_EVALUATORS) break;
+      }
+      if (providers.length >= MAX_EVALUATORS) break;
     }
   }
 
@@ -156,7 +167,8 @@ export async function dispatchEvaluators(disputeId: string): Promise<{
   for (const brief of submittedBriefs) {
     const content = await decodeContent(brief.encryptedContent, brief.contentEncryptionKeyId);
     const sanitized = sanitizeInput(content);
-    briefContents.push(sanitized);
+    const label = brief.party.role === 'INITIATOR' ? 'Party A / Initiator' : 'Party B / Respondent';
+    briefContents.push(`[${label}]\n${sanitized}`);
   }
 
   const combinedPrompt = briefContents.join('\n\n---\n\n');
@@ -293,33 +305,32 @@ export async function dispatchEvaluators(disputeId: string): Promise<{
   });
 
   if (successCount >= MIN_SUCCESSFUL_EVALUATIONS) {
-    const completedDispute = await prisma.dispute.update({
+    await aggregateEvaluations(disputeId);
+
+    const completedDispute = await prisma.dispute.findUnique({
       where: { id: disputeId },
-      data: {
-        state: 'COMPLETED',
-        stateChangedAt: new Date(),
-        completedAt: new Date(),
-      },
+      select: { state: true },
     });
-    const allParties = await prisma.party.findMany({ 
-      where: { disputeId },
-      include: { user: { select: { email: true } } }
-    });
-    for (const party of allParties) {
-      if (party.user?.email) {
-        await addEmailJob('opinion-ready', party.user.email, { disputeId });
+
+    if (completedDispute?.state === 'COMPLETED') {
+      const allParties = await prisma.party.findMany({
+        where: { disputeId },
+        include: { user: { select: { email: true } } },
+      });
+
+      for (const party of allParties) {
+        if (party.user?.email) {
+          await addEmailJob('opinion-ready', party.user.email, { disputeId });
+        }
       }
     }
     
-    // Auto-aggregate evaluations
-    await aggregateEvaluations(disputeId);
-    
-    logger.info('Evaluation threshold met, dispute completed', { disputeId, successCount });
+    logger.info('Evaluation threshold met, aggregation attempted', { disputeId, successCount, finalState: completedDispute?.state });
   } else {
     await prisma.dispute.update({
       where: { id: disputeId },
       data: {
-        state: 'WITHDRAWN',
+        state: 'FAILED',
         stateChangedAt: new Date(),
       },
     });
@@ -341,7 +352,7 @@ export async function dispatchEvaluators(disputeId: string): Promise<{
       logger.info('Auto-refund issued', { disputeId, paymentId: payment.id, amount: payment.amountUsd });
     }
 
-    logger.warn('Evaluation threshold not met, dispute withdrawn with refund', {
+    logger.warn('Evaluation threshold not met, dispute failed with refund', {
       disputeId,
       successCount,
       required: MIN_SUCCESSFUL_EVALUATIONS,

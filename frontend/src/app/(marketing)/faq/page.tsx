@@ -11,15 +11,15 @@ interface FAQItem {
 const faqs: FAQItem[] = [
   {
     question: 'What is MeritView?',
-    answer: 'MeritView is an AI-powered decision support platform that analyzes contract disputes. For a flat $49 fee, we provide a structured, multi-model analysis of your dispute\'s strengths and weaknesses. MeritView is not a replacement for legal advice.'
+    answer: 'MeritView is an AI-powered decision support platform for contract, small claims, and partnership disputes. Standard analysis starts at $99 and provides structured, multi-model analysis of each side\'s strengths and weaknesses. MeritView is not a replacement for legal advice.'
   },
   {
     question: 'How does MeritView work?',
-    answer: 'You fill out a structured 5-section brief describing your dispute, submit it with the $49 fee, and our system dispatches your brief to three leading AI models (Llama 3 70B, Mixtral 8x7B, and Gemini 1.5 Pro). Each model independently evaluates your case and produces a structured opinion, which is then aggregated into a clear report.'
+    answer: 'You create a dispute, invite the counterparty, pay for the selected tier, and each party submits a structured 5-section brief. Our system dispatches both briefs to multiple independent AI evaluators, then aggregates the outputs into a clear report.'
   },
   {
     question: 'How much does it cost?',
-    answer: 'MeritView costs a flat $49 USD per analysis. There are no hidden fees, subscriptions, or additional charges. This includes analysis by all three AI models and the aggregated opinion.'
+    answer: 'Standard analysis is $99. Expedited analysis is $199, Extended analysis is $299, and re-analysis is $49. There are no subscriptions or hidden fees.'
   },
   {
     question: 'Is MeritView legal advice?',
@@ -27,19 +27,19 @@ const faqs: FAQItem[] = [
   },
   {
     question: 'Who should use MeritView?',
-    answer: 'MeritView is designed for individuals and small businesses involved in contract disputes who want an affordable, structured analysis of their position. It is ideal for disputes where the stakes may not justify the cost of traditional legal consultation.'
+    answer: 'MeritView is designed for individuals and small businesses involved in contract, small claims, or partnership disputes who want affordable, structured decision support.'
   },
   {
     question: 'What types of disputes does MeritView handle?',
-    answer: 'Currently, MeritView handles contract interpretation disputes. This includes disputes about the meaning of contract terms, whether certain obligations were triggered, and whether a party\'s actions aligned with contractual requirements.'
+    answer: 'MeritView currently focuses on contract interpretation disputes, small claims pre-filing assessment, and partnership or co-founder conflicts.'
   },
   {
     question: 'How long does the analysis take?',
-    answer: 'Most analyses are completed within hours of submission. The three AI models evaluate your brief independently, and once all three evaluations are received, the aggregated opinion is generated. In rare cases of high demand, it may take up to 24 hours.'
+    answer: 'Most analyses are completed within hours after both parties submit briefs. Evaluators review the briefs independently, and once enough evaluations are received, the aggregated opinion is generated.'
   },
   {
     question: 'How do I submit my dispute?',
-    answer: 'Create a free account, complete the structured 5-section brief form, pay the $49 fee, and submit. The process is guided and typically takes about 30 minutes to complete the brief.'
+    answer: 'Create a free account, create your dispute, invite the counterparty, pay for your selected tier, then complete the guided 5-section brief.'
   },
   {
     question: 'What information do I need to provide?',
@@ -55,7 +55,7 @@ const faqs: FAQItem[] = [
   },
   {
     question: 'What AI models are used?',
-    answer: 'We use three leading AI models: Meta\'s Llama 3 70B (via Groq), Mistral\'s Mixtral 8x7B (via Groq), and Google\'s Gemini 1.5 Pro. These models were selected for their strong reasoning capabilities and support for structured JSON output.'
+    answer: 'The production target is five evaluators drawn from at least three model families, such as Claude, GPT, Gemini, Llama-based models, and Mistral or similar providers. The exact roster may change as models improve.'
   },
   {
     question: 'How do you ensure the quality of AI analysis?',
@@ -95,7 +95,7 @@ const faqs: FAQItem[] = [
   },
   {
     question: 'Can I use MeritView for disputes outside the US?',
-    answer: 'Yes, MeritView can analyze contract disputes governed by laws of any jurisdiction. However, the AI models provide analysis based on general contract principles and may not be familiar with specific local laws.'
+    answer: 'MeritView may be available in multiple jurisdictions, but availability can be limited by legal and regulatory requirements. AI analysis may not account for specific local law nuances.'
   },
   {
     question: 'What is a seal hash?',

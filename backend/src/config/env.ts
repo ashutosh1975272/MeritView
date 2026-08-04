@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 import { z } from 'zod';
 
 dotenv.config();
+dotenv.config({ path: '.env.local', override: true });
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
@@ -30,9 +31,9 @@ const envSchema = z.object({
   STRIPE_WEBHOOK_SECRET: z.string().optional().default(''),
   STRIPE_PRODUCT_ID: z.string().optional(),
   
-  PRICE_STANDARD: z.coerce.number().positive().default(49.00),
-  PRICE_EXPEDITED: z.coerce.number().positive().default(99.00),
-  PRICE_EXTENDED: z.coerce.number().positive().default(199.00),
+  PRICE_STANDARD: z.coerce.number().positive().default(99.00),
+  PRICE_EXPEDITED: z.coerce.number().positive().default(199.00),
+  PRICE_EXTENDED: z.coerce.number().positive().default(299.00),
   PRICE_REANALYSIS: z.coerce.number().positive().default(49.00),
   
   S3_BUCKET: z.string().optional(),
@@ -45,6 +46,9 @@ const envSchema = z.object({
   SMTP_PORT: z.preprocess(v => v === '' ? undefined : v, z.coerce.number().int().positive().max(65535).optional()),
   SMTP_USER: z.string().optional().default(''),
   SMTP_PASS: z.string().optional().default(''),
+  SMTP_FROM_NAME: z.string().optional().default('MeritView'),
+  SMTP_DKIM_DOMAIN: z.string().optional().default(''),
+  SMTP_DKIM_KEY_SELECTOR: z.string().optional().default(''),
   SMTP_DKIM_PRIVATE_KEY: z.string().optional().default(''),
   
   SENTRY_DSN: z.preprocess(v => v === '' ? undefined : v, z.string().url('Must be a valid Sentry DSN URL').optional()),

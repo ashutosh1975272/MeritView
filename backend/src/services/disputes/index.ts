@@ -5,21 +5,17 @@ import { validateTransition } from './state-machine';
 import { DisputeState, PricingTier, Prisma } from '@prisma/client';
 import { addEmailJob } from '../../jobs/queues';
 import { getEnv } from '../../config/env';
-import Stripe from 'stripe';
 import { generateId } from '../../utils/id';
-import { createInvitation as invitationsCreateInvitation } from '../invitations';
+import { createPaymentIntent } from '../payments';
+import crypto from 'crypto';
 
 const env = getEnv();
 
-const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
-  timeout: 10000,
-});
-
 const PRICING_TIERS: Record<string, { price: number; label: string }> = {
-  STANDARD: { price: env.PRICE_STANDARD, label: 'Standard' },
-  EXPEDITED: { price: env.PRICE_EXPEDITED, label: 'Expedited' },
-  EXTENDED: { price: env.PRICE_EXTENDED, label: 'Extended' },
-  REANALYSIS: { price: env.PRICE_REANALYSIS, label: 'Re-analysis' },
+  STANDARD: { price: env.PRICE_STANDARD || 99, label: 'Standard' },
+  EXPEDITED: { price: env.PRICE_EXPEDITED || 199, label: 'Expedited' },
+  EXTENDED: { price: env.PRICE_EXTENDED || 299, label: 'Extended' },
+  REANALYSIS: { price: env.PRICE_REANALYSIS || 49, label: 'Re-analysis' },
 };
 
 export async function createDispute(
@@ -60,8 +56,15 @@ export async function createDispute(
     throw new BadRequestError('Estimated stakes must be a positive number');
   }
 
+  if (!env.STRIPE_SECRET_KEY) {
+    throw new BadRequestError('Payment provider is not configured. Add STRIPE_SECRET_KEY.');
+  }
+
   const disputeId = generateId('disp');
   const partyId = generateId('party');
+  const respondentPartyId = data.counterparty ? generateId('party') : undefined;
+  const invitationToken = data.counterparty ? crypto.randomBytes(32).toString('hex') : undefined;
+  const invitationExpiresAt = data.counterparty ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) : undefined;
 
   const dispute = await prisma.$transaction(async (tx) => {
     const d = await tx.dispute.create({
@@ -73,15 +76,29 @@ export async function createDispute(
         estimatedStakesUsd: data.estimatedStakesUsd ?? null,
         priceUsd: tierConfig.price,
         pricingTier: pricingTier as PricingTier,
-        state: 'DRAFT',
+        state: 'PAYMENT_PENDING',  // Start in PAYMENT_PENDING — requires payment before briefs
         initiatorUserId: userId,
         parties: {
-          create: {
-            id: partyId,
-            role: 'INITIATOR',
-            userId: userId,
-            briefStatus: 'NOT_STARTED',
-          },
+          create: [
+            {
+              id: partyId,
+              role: 'INITIATOR',
+              userId: userId,
+              briefStatus: 'NOT_STARTED',
+            },
+            ...(data.counterparty && respondentPartyId && invitationToken && invitationExpiresAt
+              ? [{
+                  id: respondentPartyId,
+                  role: 'RESPONDENT' as const,
+                  userId: null,
+                  invitationEmail: data.counterparty.email,
+                  invitationToken,
+                  invitationStatus: 'PENDING' as const,
+                  invitationExpiresAt,
+                  briefStatus: 'NOT_STARTED' as const,
+                }]
+              : []),
+          ],
         },
       },
       include: {
@@ -97,51 +114,20 @@ export async function createDispute(
     await addEmailJob('dispute-created', user.email, { disputeId: dispute.id, title: dispute.title });
   }
 
-  let paymentIntent: { id: string; clientSecret: string } | null = null;
-  if (env.STRIPE_SECRET_KEY) {
-    try {
-      const amountCents = Math.round(tierConfig.price * 100);
-      const pi = await stripe.paymentIntents.create({
-        amount: amountCents,
-        currency: 'usd',
-        metadata: { disputeId: dispute.id, userId },
-        description: `MeritView: ${dispute.title.substring(0, 100)}`,
-        automatic_payment_methods: { enabled: true },
-      });
-      paymentIntent = { id: pi.id, clientSecret: pi.client_secret || '' };
-    } catch (err) {
-      logger.warn('Failed to create payment intent for new dispute', {
-        disputeId: dispute.id,
-        error: err instanceof Error ? err.message : String(err),
-      });
-    }
-  }
+  const pi = await createPaymentIntent(dispute.id, userId);
+  const paymentIntent = { id: pi.id, clientSecret: pi.client_secret || '' };
 
   let invitationUrl: string | undefined;
-  let invitationExpiresAt: string | undefined;
+  let invitationExpiresAtIso: string | undefined;
 
-  if (data.counterparty) {
-    try {
-      await invitationsCreateInvitation(dispute.id, data.counterparty.email, userId);
-      const party = await prisma.party.findFirst({
-        where: { disputeId: dispute.id, role: 'RESPONDENT' },
-        select: { invitationToken: true, invitationExpiresAt: true },
-      });
-      if (party?.invitationToken) {
-        invitationUrl = `${env.NEXT_PUBLIC_APP_URL}/invitations/${party.invitationToken}`;
-        invitationExpiresAt = party.invitationExpiresAt?.toISOString();
-      }
-    } catch (err) {
-      logger.warn('Failed to create invitation for counterparty', {
-        disputeId: dispute.id,
-        error: err instanceof Error ? err.message : String(err),
-      });
-    }
+  if (invitationToken) {
+    invitationUrl = `${env.NEXT_PUBLIC_APP_URL}/invitations/${invitationToken}`;
+    invitationExpiresAtIso = invitationExpiresAt?.toISOString();
   }
 
   logger.info('Dispute created', { disputeId: dispute.id, userId, hasPaymentIntent: !!paymentIntent });
 
-  return { dispute, paymentIntent, invitation_url: invitationUrl, invitation_expires_at: invitationExpiresAt };
+  return { dispute, paymentIntent, invitation_url: invitationUrl, invitation_expires_at: invitationExpiresAtIso };
 }
 
 export async function getDisputes(
@@ -200,7 +186,10 @@ export async function getDispute(disputeId: string, userId: string) {
   const dispute = await prisma.dispute.findFirst({
     where: {
       id: disputeId,
-      initiatorUserId: userId,
+      OR: [
+        { initiatorUserId: userId },
+        { parties: { some: { userId } } },
+      ],
       deletedAt: null,
     },
     include: {

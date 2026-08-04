@@ -5,9 +5,9 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 export const metadata: Metadata = {
-  title: 'MeritView — AI Decision Support for Contract Disputes',
-  description: 'Get structured, impartial analysis of your contract dispute from multiple AI models. $49 flat fee. Decision support, not legal advice.',
-  keywords: ['contract dispute', 'AI analysis', 'legal tech', 'dispute resolution', 'decision support'],
+  title: 'MeritView — AI Decision Support for Disputes',
+  description: 'Get structured, impartial analysis of contract, small claims, and partnership disputes from multiple AI models. Standard analysis starts at $99. Decision support, not legal advice.',
+  keywords: ['contract dispute', 'small claims', 'partnership dispute', 'AI analysis', 'legal tech', 'dispute resolution', 'decision support'],
   authors: [{ name: 'MeritView' }],
   creator: 'MeritView',
   publisher: 'MeritView',
@@ -18,8 +18,8 @@ export const metadata: Metadata = {
     locale: 'en_US',
     url: '/',
     siteName: 'MeritView',
-    title: 'MeritView — AI Decision Support for Contract Disputes',
-    description: 'Get structured, impartial analysis of your contract dispute from multiple AI models. $49 flat fee.',
+    title: 'MeritView — AI Decision Support for Disputes',
+    description: 'Get structured, impartial analysis of everyday disputes from multiple AI models. Standard analysis starts at $99.',
     images: [
       {
         url: '/og-image.png',
@@ -31,8 +31,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'MeritView — AI Decision Support for Contract Disputes',
-    description: 'Get structured, impartial analysis of your contract dispute from multiple AI models. $49 flat fee.',
+    title: 'MeritView — AI Decision Support for Disputes',
+    description: 'Get structured, impartial analysis of everyday disputes from multiple AI models. Standard analysis starts at $99.',
     images: ['/og-image.png'],
   },
   robots: {

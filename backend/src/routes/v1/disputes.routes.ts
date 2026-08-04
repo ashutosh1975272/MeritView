@@ -85,6 +85,34 @@ router.get(
 );
 
 router.get(
+  '/respondent',
+  authMiddleware(),
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const disputes = await getDisputesForParty(req.user!.id);
+      res.json(disputes);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.get(
+  '/respondent/:disputeId',
+  authMiddleware(),
+  validate(disputeIdParamsSchema),
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const { role } = await verifyDisputeAccess(req.params.disputeId, req.user!.id);
+      const dispute = await getDispute(req.params.disputeId, req.user!.id);
+      res.json({ role, dispute });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.get(
   '/:disputeId',
   authMiddleware(),
   validate(disputeIdParamsSchema),
@@ -138,34 +166,6 @@ router.post(
       const result = await requestReanalysis(req.params.disputeId, req.user!.id);
       logger.info('Reanalysis requested', { disputeId: req.params.disputeId, userId: req.user!.id });
       res.json(result);
-    } catch (error) {
-      next(error);
-    }
-  }
-);
-
-router.get(
-  '/respondent',
-  authMiddleware(),
-  async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    try {
-      const disputes = await getDisputesForParty(req.user!.id);
-      res.json(disputes);
-    } catch (error) {
-      next(error);
-    }
-  }
-);
-
-router.get(
-  '/respondent/:disputeId',
-  authMiddleware(),
-  validate(disputeIdParamsSchema),
-  async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    try {
-      const { role } = await verifyDisputeAccess(req.params.disputeId, req.user!.id);
-      const dispute = await getDispute(req.params.disputeId, req.user!.id);
-      res.json({ role, dispute });
     } catch (error) {
       next(error);
     }

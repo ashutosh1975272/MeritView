@@ -1,6 +1,6 @@
 import * as crypto from 'crypto';
 
-export type IdPrefix = 'user' | 'disp' | 'party' | 'brief' | 'opin' | 'pay' | 'doc' | 'inv' | 'eval' | 'bps' | 'aud';
+export type IdPrefix = 'user' | 'disp' | 'party' | 'brief' | 'opin' | 'pay' | 'doc' | 'inv' | 'eval' | 'bps' | 'aud' | 'fbk';
 
 export function generateId(prefix: IdPrefix): string {
   const random = crypto.randomBytes(4).toString('hex');
