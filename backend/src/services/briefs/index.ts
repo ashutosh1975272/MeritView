@@ -87,6 +87,7 @@ export async function saveDraft(
   }
 
   if (
+    dispute.state !== 'DRAFT' &&
     dispute.state !== 'AWAITING_COUNTERPARTY' &&
     dispute.state !== 'AWAITING_BRIEFS' &&
     dispute.state !== 'AWAITING_COUNTERPARTY_BRIEF' &&
@@ -123,6 +124,10 @@ export async function saveDraft(
   const serialized = serializeSectionsForEncryption(sections);
   const { encryptedContent, contentEncryptionKeyId } = encrypt(serialized);
 
+  const sealHash = cryptoCreateHash(encryptedContent);
+
+  const now = new Date();
+
   const brief = await prisma.brief.upsert({
     where: { partyId },
     create: {
@@ -134,13 +139,19 @@ export async function saveDraft(
       wordCount,
       supportingDocumentIds: supportingDocumentIds || [],
       status: 'DRAFT',
+      version: 1,
+      lastEditedAt: now,
+      sealHash,
     },
     update: {
       encryptedContent,
       contentEncryptionKeyId,
       wordCount,
       supportingDocumentIds: supportingDocumentIds || [],
-      updatedAt: new Date(),
+      updatedAt: now,
+      lastEditedAt: now,
+      version: { increment: 1 },
+      sealHash,
     },
   });
 
@@ -153,6 +164,7 @@ export async function saveDraft(
     id: brief.id,
     status: brief.status,
     wordCount: brief.wordCount,
+    version: brief.version,
   };
 }
 
@@ -172,6 +184,7 @@ export async function submitBrief(
   }
 
   if (
+    dispute.state !== 'DRAFT' &&
     dispute.state !== 'AWAITING_COUNTERPARTY' &&
     dispute.state !== 'AWAITING_BRIEFS' &&
     dispute.state !== 'AWAITING_COUNTERPARTY_BRIEF' &&
@@ -262,6 +275,8 @@ export async function submitBrief(
       wordCount,
       supportingDocumentIds: supportingDocumentIds || [],
       status: 'SEALED',
+      version: 1,
+      lastEditedAt: now,
       submittedAt: now,
       sealedAt: now,
       sealHash,
@@ -272,6 +287,8 @@ export async function submitBrief(
       wordCount,
       supportingDocumentIds: supportingDocumentIds || [],
       status: 'SEALED',
+      version: { increment: 1 },
+      lastEditedAt: now,
       submittedAt: now,
       sealedAt: now,
       sealHash,
@@ -296,18 +313,25 @@ export async function submitBrief(
   let shouldDispatchEvaluators = false;
   const allParties = await prisma.party.findMany({
     where: { disputeId },
-    select: { id: true, role: true, briefStatus: true },
+    select: { id: true, role: true, briefStatus: true, invitationStatus: true },
   });
   const hasRespondent = allParties.some((p) => p.role === 'RESPONDENT');
+  const hasAcceptedRespondent = allParties.some(
+    (p) => p.role === 'RESPONDENT' && p.invitationStatus === 'ACCEPTED'
+  );
+  const paidPayment = await prisma.payment.findFirst({
+    where: { disputeId, status: 'SUCCEEDED' },
+  });
 
-  if (!hasRespondent) {
-    newState = 'AWAITING_BRIEFS';
+  if (!hasRespondent || !hasAcceptedRespondent) {
+    if (paidPayment) {
+      newState = 'UNDER_ANALYSIS';
+      shouldDispatchEvaluators = true;
+    } else {
+      newState = 'PAYMENT_PENDING';
+    }
   } else if (unsubmittedParties.length === 0) {
     // All parties have submitted their briefs
-    const paidPayment = await prisma.payment.findFirst({
-      where: { disputeId, status: 'SUCCEEDED' },
-    });
-
     if (paidPayment) {
       // Payment done + all briefs in → trigger analysis
       newState = 'UNDER_ANALYSIS';
@@ -349,12 +373,12 @@ export async function submitBrief(
   }
 
   // Dispatch evaluators if all conditions met
-  if (shouldDispatchEvaluators) {
-    const { dispatchEvaluators } = await import('../evaluation/index.js');
-    dispatchEvaluators(disputeId).catch((error: Error) => {
-      logger.error('Evaluation dispatch failed after brief submission', error, { disputeId });
-    });
-  }
+if (shouldDispatchEvaluators) {
+  const { dispatchEvaluators } = await import('../evaluation/index.js');
+  await dispatchEvaluators(disputeId).catch((error: Error) => {
+    logger.error('Evaluation dispatch failed after brief submission', error, { disputeId });
+  });
+}
 
   const nextAction =
     newState === 'AWAITING_BRIEFS' && !hasRespondent
@@ -440,6 +464,14 @@ export async function getBrief(
   const serialized = decrypt(brief.encryptedContent, brief.contentEncryptionKeyId);
   const sections = deserializeSectionsFromEncryption(serialized);
 
+  if (brief.sealHash) {
+    const computedHash = cryptoCreateHash(brief.encryptedContent);
+    if (computedHash !== brief.sealHash) {
+      logger.error('Brief seal hash mismatch', { briefId: brief.id, disputeId, expected: brief.sealHash, actual: computedHash });
+      throw new BadRequestError('Brief integrity check failed. Please contact support.');
+    }
+  }
+
   return {
     id: brief.id,
     status: brief.status,
@@ -451,5 +483,7 @@ export async function getBrief(
     updatedAt: brief.updatedAt,
     submittedAt: brief.submittedAt,
     sealedAt: brief.sealedAt,
+    version: brief.version,
+    lastEditedAt: brief.lastEditedAt,
   };
 }

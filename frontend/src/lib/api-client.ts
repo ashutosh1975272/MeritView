@@ -87,18 +87,19 @@ class ApiClient {
 
   private async request<T = any>(
     endpoint: string,
-    options: RequestInit & { timeout?: number }
+    options: RequestInit & { timeout?: number; silentNotFound?: boolean }
   ): Promise<T> {
+    const { timeout: _timeout, silentNotFound, ...fetchOptions } = options;
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
       ...(this.accessToken && { Authorization: `Bearer ${this.accessToken}` }),
-      ...options.headers,
+      ...fetchOptions.headers,
     };
 
-    console.log(`[API Client] Starting request to ${endpoint}`, { options, accessToken: this.accessToken ? 'Present' : 'Missing' });
+    console.log(`[API Client] Starting request to ${endpoint}`, { options: fetchOptions, accessToken: this.accessToken ? 'Present' : 'Missing' });
 
     let response = await fetch(`${this.baseUrl}${endpoint}`, {
-      ...options,
+      ...fetchOptions,
       headers,
     });
     
@@ -112,10 +113,10 @@ class ApiClient {
         const newHeaders: HeadersInit = {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${this.accessToken}`,
-          ...options.headers,
+          ...fetchOptions.headers,
         };
         response = await fetch(`${this.baseUrl}${endpoint}`, {
-          ...options,
+          ...fetchOptions,
           headers: newHeaders,
         });
         console.log(`[API Client] Retry response for ${endpoint}:`, response.status);
@@ -131,9 +132,13 @@ class ApiClient {
     }
 
     if (!response.ok) {
-      console.error(`[API Client] Request to ${endpoint} failed with status ${response.status}`);
+      if (!(silentNotFound && response.status === 404)) {
+        console.error(`[API Client] Request to ${endpoint} failed with status ${response.status}`);
+      }
       const error = await response.json().catch(() => ({ error: { message: 'Request failed' } }));
-      console.error(`[API Client] Error details from backend:`, error);
+      if (!(silentNotFound && response.status === 404)) {
+        console.error(`[API Client] Error details from backend:`, error);
+      }
       const err = new Error(error.error?.message || 'Request failed') as any;
       err.status = response.status;
       err.code = error.error?.code;
@@ -185,7 +190,8 @@ class ApiClient {
   }
 
   async getDispute(id: string): Promise<any> {
-    return this.get(`/disputes/${id}`);
+    const res = await this.get(`/disputes/${id}`);
+    return res?.dispute ?? res;
   }
 
   async createDispute(data: {
@@ -236,6 +242,31 @@ class ApiClient {
     sealedAt: string | null;
   }> {
     return this.get(`/disputes/${disputeId}/parties/${partyId}/brief`);
+  }
+
+  async getBriefMaybe(disputeId: string, partyId: string): Promise<{
+    id: string;
+    status: string;
+    sections: Record<string, string>;
+    wordCount: number;
+    supportingDocumentIds: string[];
+    sealHash: string | null;
+    createdAt: string;
+    updatedAt: string;
+    submittedAt: string | null;
+    sealedAt: string | null;
+  } | null> {
+    try {
+      return await this.request(`/disputes/${disputeId}/parties/${partyId}/brief`, {
+        method: 'GET',
+        silentNotFound: true,
+      });
+    } catch (err: any) {
+      if (err.status === 404) {
+        return null;
+      }
+      throw err;
+    }
   }
 
   async createPaymentIntent(disputeId: string): Promise<{ clientSecret?: string; client_secret?: string; paymentIntentId?: string; amount?: number; currency?: string; payment_intent?: { client_secret?: string } }> {
@@ -336,18 +367,50 @@ class ApiClient {
     return this.get(`/disputes/${disputeId}/invitation`);
   }
 
-  async acceptInvitation(token: string): Promise<{ disputeId: string; message: string }> {
+  async acceptInvitation(token: string): Promise<{
+    disputeId: string;
+    message: string;
+    access_token?: string;
+    refresh_token?: string;
+    expires_in?: number;
+    user?: { id: string; email: string; displayName?: string; role: string; emailVerified: boolean };
+  }> {
     return this.post(`/invitations/${token}/accept`, {});
+  }
+
+  async getInvitation(token: string): Promise<{
+    id: string;
+    disputeId: string;
+    disputeTitle: string;
+    status: string;
+    email?: string;
+    sentAt?: string;
+    expiresAt?: string;
+    acceptedAt?: string;
+  }> {
+    return this.get(`/invitations/${token}`);
   }
 
   async declineInvitation(token: string): Promise<{ disputeId: string; message: string }> {
     return this.post(`/invitations/${token}/decline`, {});
   }
 
+  async expireInvitation(token: string): Promise<{ partyId: string; email: string; status: string }> {
+    return this.post(`/invitations/${token}/expire`, {});
+  }
+
   // Brief prep methods
 
-  async createBriefPrepSession(disputeId: string, partyId: string): Promise<any> {
-    return this.post(`/disputes/${disputeId}/parties/${partyId}/brief-prep/session`, {});
+  async createBriefPrepSession(
+    disputeId: string,
+    partyId: string,
+    llmProvider?: string,
+    modelPreference?: string
+  ): Promise<any> {
+    return this.post(`/disputes/${disputeId}/parties/${partyId}/brief-prep/session`, {
+      llmProvider,
+      modelPreference,
+    });
   }
 
   async sendBriefPrepMessage(disputeId: string, partyId: string, sessionId: string, content: string): Promise<any> {

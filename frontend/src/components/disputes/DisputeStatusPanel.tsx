@@ -56,6 +56,12 @@ export function DisputeStatusPanel({ dispute, currentUserId }: { dispute: Disput
   const currentParty = parties.find((party) => party.userId === currentUserId);
   const initiator = parties.find((party) => party.role === 'INITIATOR');
   const respondent = parties.find((party) => party.role === 'RESPONDENT');
+  const respondentStatus = respondent?.invitationStatus || 'NOT_SENT';
+  const respondentLabel =
+    respondentStatus === 'ACCEPTED' ? 'Joined' :
+    respondentStatus === 'PENDING' ? 'Invited' :
+    respondentStatus === 'EXPIRED' ? 'Expired' :
+    respondentStatus === 'DECLINED' ? 'Declined' : 'Not invited';
 
   const bothBriefsSubmitted = parties.length >= 2 && parties.every((party) => party.briefStatus === 'SUBMITTED');
   const waitingFor = parties.filter((party) => party.briefStatus !== 'SUBMITTED').map((party) => party.role).join(', ');
@@ -77,12 +83,12 @@ export function DisputeStatusPanel({ dispute, currentUserId }: { dispute: Disput
           <StatusPill value={currentParty?.role || 'viewer'} tone={currentParty?.role === 'INITIATOR' ? 'blue' : 'purple'} />
         </div>
         <div className="flex items-center justify-between gap-3">
-          <span className="text-muted-foreground">Payment</span>
-          <StatusPill value={paidPayment ? `paid $${Number(paidPayment.amountUsd || dispute.priceUsd || 0).toFixed(2)}` : 'not paid'} tone={paidPayment ? 'green' : 'yellow'} />
+          <span className="text-muted-foreground">Counterparty</span>
+          <StatusPill value={respondentLabel} tone={respondentStatus === 'ACCEPTED' ? 'green' : respondentStatus === 'PENDING' ? 'blue' : respondentStatus === 'EXPIRED' || respondentStatus === 'DECLINED' ? 'gray' : 'gray'} />
         </div>
         <div className="flex items-center justify-between gap-3">
-          <span className="text-muted-foreground">Tier</span>
-          <span className="font-medium capitalize">{formatLabel(dispute.pricingTier)}</span>
+          <span className="text-muted-foreground">Payment</span>
+          <StatusPill value={paidPayment ? `paid $${Number(paidPayment.amountUsd || dispute.priceUsd || 0).toFixed(2)}` : 'not paid'} tone={paidPayment ? 'green' : 'yellow'} />
         </div>
       </div>
 
@@ -95,14 +101,22 @@ export function DisputeStatusPanel({ dispute, currentUserId }: { dispute: Disput
               <StatusPill value={party!.briefStatus || 'not started'} tone={party!.briefStatus === 'SUBMITTED' ? 'green' : party!.briefStatus === 'IN_PROGRESS' ? 'yellow' : 'gray'} />
             </div>
             <p className="mt-1 text-xs text-muted-foreground truncate">
-              {party!.userId ? (party!.userId === currentUserId ? 'You' : 'Joined') : party!.invitationEmail || 'Not invited'}
+              {party!.role === 'RESPONDENT'
+                ? (party!.invitationStatus === 'ACCEPTED'
+                    ? 'Joined'
+                    : party!.invitationStatus === 'PENDING'
+                      ? `Invited to ${party!.invitationEmail || 'counterparty'}`
+                      : party!.invitationStatus === 'EXPIRED'
+                        ? 'Invitation expired'
+                        : party!.invitationEmail || 'Not invited')
+                : party!.userId === currentUserId ? 'You' : 'Initiator'}
             </p>
             {party!.role === 'RESPONDENT' && party!.invitationStatus && (
-              <div className="mt-2"><StatusPill value={`invite ${party!.invitationStatus}`} tone={party!.invitationStatus === 'ACCEPTED' ? 'green' : 'blue'} /></div>
+              <div className="mt-2"><StatusPill value={`invite ${party!.invitationStatus}`} tone={party!.invitationStatus === 'ACCEPTED' ? 'green' : party!.invitationStatus === 'PENDING' ? 'blue' : 'gray'} /></div>
             )}
           </div>
         ))}
-        {!respondent && <p className="text-xs text-muted-foreground">No counterparty yet. The initiator can invite one after payment.</p>}
+        {!respondent && <p className="text-xs text-muted-foreground">No counterparty yet. The initiator can invite someone anytime from the workspace.</p>}
       </div>
 
       <div className="border-t border-border pt-4 text-xs text-muted-foreground">

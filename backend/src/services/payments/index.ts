@@ -14,10 +14,37 @@ const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
 
 const IDEMPOTENCY_TTL = 24 * 60 * 60 * 1000;
 
+function isDemoMode(): boolean {
+  return env.DEMO_MODE === 'true';
+}
+
 function ensureStripeConfigured(): void {
+  if (isDemoMode()) {
+    return;
+  }
   if (!env.STRIPE_SECRET_KEY) {
     throw new BadRequestError('Payment provider is not configured. Add STRIPE_SECRET_KEY.');
   }
+}
+
+function generateMockPaymentIntentId(): string {
+  return `pi_mock_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function getMockPaymentIntent(disputeId: string, userId: string, amountCents: number, existingId?: string): Stripe.PaymentIntent {
+  const id = existingId || `pi_mock_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  return {
+    id,
+    object: 'payment_intent',
+    amount: amountCents,
+    currency: 'usd',
+    status: 'requires_payment_method',
+    client_secret: `${id}_secret_${Math.random().toString(36).slice(2, 10)}`,
+    metadata: { disputeId, userId },
+    description: `MeritView analysis (demo)`,
+    automatic_payment_methods: { enabled: true },
+    latest_charge: null,
+  } as any;
 }
 
 function getTierAmountCents(tier: string): number {
@@ -112,8 +139,40 @@ export async function createPaymentIntent(disputeId: string, userId: string): Pr
       where: { processorPaymentId: paymentIntentId },
     });
     if (paymentRecord) {
+      if (isDemoMode()) {
+        return getMockPaymentIntent(disputeId, userId, amountCents, paymentIntentId);
+      }
       return stripe.paymentIntents.retrieve(paymentIntentId);
     }
+  }
+
+  if (isDemoMode()) {
+    const mockIntent = getMockPaymentIntent(disputeId, userId, amountCents);
+    await redis.psetex(idempotencyKey, IDEMPOTENCY_TTL, mockIntent.id);
+
+    await prisma.payment.upsert({
+      where: {
+        processorPaymentId: mockIntent.id,
+      },
+      update: {
+        status: 'PENDING',
+        amountUsd,
+      },
+      create: {
+        id: generateId('pay'),
+        disputeId,
+        userId,
+        amountUsd,
+        currency: 'USD',
+        processor: 'stripe',
+        processorPaymentId: mockIntent.id,
+        status: 'PENDING',
+        idempotencyKey,
+      },
+    });
+
+    logger.info('Mock payment intent created', { disputeId, userId, paymentIntentId: mockIntent.id });
+    return mockIntent;
   }
 
   const paymentIntent = await stripe.paymentIntents.create(
@@ -169,7 +228,17 @@ export async function confirmPayment(
 ): Promise<{ payment: any; dispute: any }> {
   ensureStripeConfigured();
 
-  const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+  let paymentIntent: Stripe.PaymentIntent;
+  if (isDemoMode()) {
+    paymentIntent = {
+      id: paymentIntentId,
+      status: 'succeeded',
+      metadata: { disputeId, userId },
+      latest_charge: `ch_mock_${Date.now()}`,
+    } as any;
+  } else {
+    paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+  }
 
   if (paymentIntent.status !== 'succeeded') {
     throw new BadRequestError('Payment has not been completed', {
@@ -191,9 +260,6 @@ export async function confirmPayment(
     return { payment, dispute };
   }
 
-  // Determine next dispute state after payment
-  // If counterparty is already invited → AWAITING_COUNTERPARTY
-  // If no counterparty yet → AWAITING_BRIEFS
   const respondentParty = await prisma.party.findFirst({
     where: { disputeId, role: 'RESPONDENT' },
     select: { id: true, invitationStatus: true, userId: true },
@@ -205,6 +271,21 @@ export async function confirmPayment(
       : respondentParty
       ? 'AWAITING_COUNTERPARTY'
       : 'AWAITING_BRIEFS';
+
+  const parties = await prisma.party.findMany({
+    where: { disputeId },
+    select: { briefStatus: true, invitationStatus: true, role: true },
+  });
+  const hasAcceptedRespondent = parties.some((p) => p.role === 'RESPONDENT' && p.invitationStatus === 'ACCEPTED');
+  const allPartiesSubmitted =
+    parties.length > 0 && parties.every((p) => p.briefStatus === 'SUBMITTED');
+  const hasAnySubmittedBrief = parties.some((p) => p.briefStatus === 'SUBMITTED');
+  const finalState =
+    (!hasAcceptedRespondent && hasAnySubmittedBrief)
+      ? 'UNDER_ANALYSIS'
+      : allPartiesSubmitted && nextDisputeState === 'AWAITING_BRIEFS'
+      ? 'UNDER_ANALYSIS'
+      : nextDisputeState;
 
   const [updatedPayment, updatedDispute] = await prisma.$transaction([
     prisma.payment.update({
@@ -218,7 +299,7 @@ export async function confirmPayment(
     prisma.dispute.update({
       where: { id: disputeId },
       data: {
-        state: nextDisputeState as any,
+        state: finalState as any,
         stateChangedAt: new Date(),
       },
     }),
@@ -299,11 +380,11 @@ export async function requestRefund(
     }
   }
 
-  const [updatedPayment, updatedDispute] = await prisma.$transaction([
-    prisma.payment.update({
-      where: { id: payment.id },
-      data: {
-        status: 'REFUNDED',
+const [updatedPayment, updatedDispute] = await prisma.$transaction([
+  prisma.payment.update({
+    where: { id: payment.id },
+    data: {
+      status: 'REFUNDED',
         refundedAmountUsd: payment.amountUsd,
         refundReason: reason,
         refundedAt: new Date(),
@@ -343,7 +424,24 @@ export async function getUserPayments(userId: string): Promise<any[]> {
 }
 
 export async function handlePaymentSucceeded(paymentIntentId: string): Promise<void> {
-  const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+  let paymentIntent: Stripe.PaymentIntent;
+  if (isDemoMode()) {
+    const payment = await prisma.payment.findFirst({
+      where: { processorPaymentId: paymentIntentId },
+    });
+    if (!payment) {
+      logger.warn('Webhook: payment record not found for mock intent', { paymentIntentId });
+      return;
+    }
+    paymentIntent = {
+      id: paymentIntentId,
+      metadata: { disputeId: payment.disputeId, userId: payment.userId },
+      latest_charge: `ch_mock_${Date.now()}`,
+    } as any;
+  } else {
+    paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+  }
+
   const { disputeId, userId } = paymentIntent.metadata;
 
   if (!disputeId || !userId) {
@@ -378,7 +476,18 @@ export async function handlePaymentSucceeded(paymentIntentId: string): Promise<v
       ? 'AWAITING_COUNTERPARTY'
       : 'AWAITING_BRIEFS';
 
-  const [updatedPayment, updatedDispute] = await prisma.$transaction([
+  const parties = await prisma.party.findMany({
+  where: { disputeId },
+  select: { briefStatus: true },
+});
+const allPartiesSubmitted =
+  parties.length > 0 && parties.every((p) => p.briefStatus === 'SUBMITTED');
+const finalState =
+  allPartiesSubmitted && nextDisputeState === 'AWAITING_BRIEFS'
+    ? 'UNDER_ANALYSIS'
+    : nextDisputeState;
+
+const [updatedPayment, updatedDispute] = await prisma.$transaction([
     prisma.payment.update({
       where: { id: payment.id },
       data: {
@@ -390,7 +499,7 @@ export async function handlePaymentSucceeded(paymentIntentId: string): Promise<v
     prisma.dispute.update({
       where: { id: disputeId },
       data: {
-        state: nextDisputeState as any,
+        state: finalState as any,
         stateChangedAt: new Date(),
       },
     }),

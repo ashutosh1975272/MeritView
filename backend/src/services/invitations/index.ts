@@ -8,7 +8,7 @@ import { generateId } from '../../utils/id';
 import { validateTransition } from '../disputes/state-machine';
 import { generateTokenPair, storeRefreshToken } from '../auth';
 
-const INVITATION_EXPIRY_DAYS = 7;
+const INVITATION_EXPIRY_HOURS = 48;
 
 async function ensureInvitationRecord(partyId: string) {
   return prisma.invitation.upsert({
@@ -56,13 +56,9 @@ export async function createInvitation(
     throw new ForbiddenError('Only the dispute initiator can send invitations');
   }
 
-  const invitableStates = ['PAYMENT_PENDING', 'AWAITING_BRIEFS', 'AWAITING_COUNTERPARTY', 'AWAITING_COUNTERPARTY_BRIEF'];
+  const invitableStates = ['DRAFT', 'PAYMENT_PENDING', 'AWAITING_BRIEFS', 'AWAITING_COUNTERPARTY', 'AWAITING_COUNTERPARTY_BRIEF'];
   if (!invitableStates.includes(dispute.state)) {
     throw new ConflictError(`Can only invite counterparty before analysis starts. Current state: ${dispute.state}`);
-  }
-
-  if (dispute.parties.length > 0) {
-    throw new ConflictError('Counterparty has already been invited');
   }
 
   const existingUser = await prisma.user.findUnique({ where: { email } });
@@ -73,29 +69,51 @@ export async function createInvitation(
 
   const token = generateInvitationToken();
   const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + INVITATION_EXPIRY_DAYS);
+  expiresAt.setHours(expiresAt.getHours() + INVITATION_EXPIRY_HOURS);
+
+  const existingParty = dispute.parties[0];
+  if (existingParty?.invitationStatus === 'PENDING') {
+    throw new ConflictError('An invitation is already active. Delete it before inviting someone else.');
+  }
+
+  if (existingParty?.invitationStatus === 'ACCEPTED') {
+    throw new ConflictError('A counterparty has already joined this dispute.');
+  }
 
   const paidPayment = await prisma.payment.findFirst({
     where: { disputeId, status: 'SUCCEEDED' },
   });
-  const shouldSendNow = Boolean(paidPayment);
 
-  const party = await prisma.party.create({
-    data: {
-      id: generateId('party'),
-      disputeId,
-      role: 'RESPONDENT',
-      userId: existingUser?.id || null,
-      invitationEmail: email,
-      invitationToken: token,
-      invitationStatus: 'PENDING',
-      invitationSentAt: shouldSendNow ? new Date() : null,
-      invitationExpiresAt: expiresAt,
-      briefStatus: 'NOT_STARTED',
-    },
-  });
+  const party = existingParty
+    ? await prisma.party.update({
+        where: { id: existingParty.id },
+        data: {
+          userId: existingUser?.id || null,
+          invitationEmail: email,
+          invitationToken: token,
+          invitationStatus: 'PENDING',
+          invitationSentAt: new Date(),
+          invitationExpiresAt: expiresAt,
+          invitationAcceptedAt: null,
+          briefStatus: 'NOT_STARTED',
+        },
+      })
+    : await prisma.party.create({
+        data: {
+          id: generateId('party'),
+          disputeId,
+          role: 'RESPONDENT',
+          userId: existingUser?.id || null,
+          invitationEmail: email,
+          invitationToken: token,
+          invitationStatus: 'PENDING',
+          invitationSentAt: new Date(),
+          invitationExpiresAt: expiresAt,
+          briefStatus: 'NOT_STARTED',
+        },
+      });
 
-  if (shouldSendNow && dispute.state !== 'AWAITING_COUNTERPARTY') {
+  if (paidPayment && dispute.state !== 'AWAITING_COUNTERPARTY') {
     await prisma.dispute.update({
       where: { id: disputeId },
       data: {
@@ -105,15 +123,13 @@ export async function createInvitation(
     });
   }
 
-  if (shouldSendNow) {
-    await addEmailJob('invitation-sent', email, {
-      disputeId,
-      disputeTitle: dispute.title,
-      inviterName: dispute.initiator.displayName || 'Someone',
-      token,
-      expiresAt: expiresAt.toISOString(),
-    });
-  }
+  await addEmailJob('invitation-sent', email, {
+    disputeId,
+    disputeTitle: dispute.title,
+    inviterName: dispute.initiator.displayName || 'Someone',
+    token,
+    expiresAt: expiresAt.toISOString(),
+  });
 
   await createInvitationEvent(party.id, 'SENT', { disputeId, email });
 
@@ -155,6 +171,11 @@ export async function acceptInvitation(
     });
     throw new BadRequestError('Invitation has expired');
   }
+
+  const hasSuccessfulPayment = await prisma.payment.findFirst({
+    where: { disputeId: party.disputeId, status: 'SUCCEEDED' },
+    select: { id: true },
+  });
 
   let user = await prisma.user.findUnique({
     where: { email: party.invitationEmail! },
@@ -213,26 +234,28 @@ export async function acceptInvitation(
   }
 
   const now = new Date();
+  const nextDisputeState = hasSuccessfulPayment ? 'AWAITING_BRIEFS' : party.dispute.state;
 
-  const nextDisputeState = party.dispute.state === 'PAYMENT_PENDING' ? 'PAYMENT_PENDING' : 'AWAITING_BRIEFS';
-
-  await prisma.$transaction([
-    prisma.party.update({
+  await prisma.$transaction(async (tx) => {
+    await tx.party.update({
       where: { id: party.id },
       data: {
         userId: user.id,
         invitationStatus: 'ACCEPTED',
         invitationAcceptedAt: now,
       },
-    }),
-    prisma.dispute.update({
-      where: { id: party.disputeId },
-      data: {
-        state: nextDisputeState,
-        stateChangedAt: now,
-      },
-    }),
-  ]);
+    });
+
+    if (hasSuccessfulPayment && nextDisputeState !== party.dispute.state) {
+      await tx.dispute.update({
+        where: { id: party.disputeId },
+        data: {
+          state: nextDisputeState,
+          stateChangedAt: now,
+        },
+      });
+    }
+  });
 
   await createInvitationEvent(party.id, 'ACCEPTED', { disputeId: party.disputeId, userId: user.id });
 
@@ -291,13 +314,6 @@ export async function declineInvitation(token: string) {
       where: { id: party.id },
       data: {
         invitationStatus: 'DECLINED',
-      },
-    }),
-    prisma.dispute.update({
-      where: { id: party.disputeId },
-      data: {
-        state: 'DECLINED',
-        stateChangedAt: now,
       },
     }),
   ]);
@@ -380,7 +396,7 @@ export async function resendInvitation(
 
   const token = generateInvitationToken();
   const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + INVITATION_EXPIRY_DAYS);
+  expiresAt.setHours(expiresAt.getHours() + INVITATION_EXPIRY_HOURS);
 
   await prisma.party.update({
     where: { id: party.id },
@@ -393,10 +409,17 @@ export async function resendInvitation(
     },
   });
 
-  await prisma.dispute.update({
-    where: { id: disputeId },
-    data: { state: 'AWAITING_COUNTERPARTY', stateChangedAt: new Date() },
+  const hasSuccessfulPayment = await prisma.payment.findFirst({
+    where: { disputeId, status: 'SUCCEEDED' },
+    select: { id: true },
   });
+
+  if (hasSuccessfulPayment) {
+    await prisma.dispute.update({
+      where: { id: disputeId },
+      data: { state: 'AWAITING_COUNTERPARTY', stateChangedAt: new Date() },
+    });
+  }
 
   await addEmailJob('invitation-sent', party.invitationEmail!, {
     disputeId,
@@ -415,6 +438,58 @@ export async function resendInvitation(
     email: party.invitationEmail,
     status: 'PENDING',
     expiresAt,
+  };
+}
+
+export async function expireInvitation(token: string) {
+  const party = await prisma.party.findUnique({
+    where: { invitationToken: token },
+    include: { dispute: true },
+  });
+
+  if (!party) {
+    throw new NotFoundError('Invitation not found');
+  }
+
+  if (party.invitationStatus !== 'PENDING') {
+    throw new ConflictError(`Invitation has already been ${party.invitationStatus.toLowerCase()}`);
+  }
+
+  const now = new Date();
+
+  await prisma.$transaction([
+    prisma.party.update({
+      where: { id: party.id },
+      data: {
+        invitationStatus: 'EXPIRED',
+        invitationExpiresAt: now,
+      },
+    }),
+  ]);
+
+  const hasSuccessfulPayment = await prisma.payment.findFirst({
+    where: { disputeId: party.disputeId, status: 'SUCCEEDED' },
+    select: { id: true },
+  });
+
+  if (hasSuccessfulPayment) {
+    await prisma.dispute.update({
+      where: { id: party.disputeId },
+      data: {
+        state: 'AWAITING_COUNTERPARTY',
+        stateChangedAt: now,
+      },
+    });
+  }
+
+  await createInvitationEvent(party.id, 'EXPIRED', { disputeId: party.disputeId });
+
+  logger.info('Invitation expired', { disputeId: party.disputeId, token: token.substring(0, 8) + '...' });
+
+  return {
+    partyId: party.id,
+    email: party.invitationEmail,
+    status: 'EXPIRED',
   };
 }
 

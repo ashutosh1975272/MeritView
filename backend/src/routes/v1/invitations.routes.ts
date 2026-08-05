@@ -7,6 +7,7 @@ import {
   createInvitation,
   acceptInvitation,
   declineInvitation,
+  expireInvitation,
   getInvitationStatus,
   getInvitationByToken,
   resendInvitation,
@@ -43,7 +44,7 @@ const tokenParamSchema = z.object({
 });
 
 router.post(
-  '/v1/disputes/:disputeId/invite',
+  '/disputes/:disputeId/invite',
   authMiddleware(),
   inviteRateLimiter,
   validate(createInviteSchema),
@@ -64,7 +65,7 @@ router.post(
 );
 
 router.get(
-  '/v1/disputes/:disputeId/invitation',
+  '/disputes/:disputeId/invitation',
   authMiddleware(),
   validate(disputeIdParamSchema),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -115,7 +116,7 @@ const acceptInviteSchema = z.object({
 });
 
 router.post(
-  '/v1/invitations/:token/accept',
+  '/invitations/:token/accept',
   validate(acceptInviteSchema),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
@@ -136,7 +137,7 @@ router.post(
 );
 
 router.get(
-  '/v1/invitations/:token',
+  '/invitations/:token',
   validate(tokenParamSchema),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
@@ -150,7 +151,7 @@ router.get(
 );
 
 router.post(
-  '/v1/disputes/:disputeId/re-invite',
+  '/disputes/:disputeId/re-invite',
   authMiddleware(),
   inviteRateLimiter,
   validate(disputeIdParamSchema),
@@ -167,13 +168,28 @@ router.post(
 );
 
 router.post(
-  '/v1/invitations/:token/decline',
+  '/invitations/:token/decline',
   validate(tokenParamSchema),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const { token } = req.params;
       const result = await declineInvitation(token);
       logger.info('Invitation declined via route', { token: token.substring(0, 8) + '...' });
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.post(
+  '/invitations/:token/expire',
+  validate(tokenParamSchema),
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const { token } = req.params;
+      const result = await expireInvitation(token);
+      logger.info('Invitation expired via route', { token: token.substring(0, 8) + '...' });
       res.json(result);
     } catch (error) {
       next(error);

@@ -1,7 +1,7 @@
 import { prisma } from '../../db/prisma.js';
 import { logger } from '../../utils/logger.js';
 import { decrypt } from '../../utils/crypto.js';
-import { BadRequestError, NotFoundError, InternalError } from '../../utils/errors.js';
+import { BadRequestError, NotFoundError, InternalError, ConflictError } from '../../utils/errors.js';
 import { providerRegistry } from '../../providers/registry.js';
 import { withRetry } from '../../providers/retry.js';
 import { estimateCost } from '../../providers/cost.js';
@@ -11,10 +11,11 @@ import { EvaluationOutput, DispatchResult } from '../../providers/types.js';
 import { ProviderError, CircuitBreakerOpenError } from '../../providers/errors.js';
 import { addEmailJob } from '../../jobs/queues.js';
 import { generateId } from '../../utils/id.js';
+import { getEnv } from '../../config/env.js';
 import { aggregateEvaluations } from '../aggregation/index.js';
 
 const PROVIDER_TIMEOUT_MS = 60000;
-const MIN_SUCCESSFUL_EVALUATIONS = 3;
+const MIN_SUCCESSFUL_EVALUATIONS = getEnv().MIN_SUCCESSFUL_EVALUATIONS;
 
 const PROMPT_INJECTION_PATTERNS = [
   /ignore\s+(all\s+)?(prior|previous|above)\s+instructions/i,
@@ -118,15 +119,19 @@ export async function createEvaluationJob(disputeId: string): Promise<void> {
     );
   }
 
+  if (dispute.evaluationLock) {
+    throw new ConflictError('Evaluation is already in progress for this dispute');
+  }
+
   const submittedBriefs = dispute.briefs.filter((b) => b.status === 'SUBMITTED' || b.status === 'SEALED');
   if (submittedBriefs.length === 0) {
     throw new BadRequestError('No submitted briefs found for this dispute');
   }
 
-  const allPartiesSubmitted = dispute.parties.every(p => p.briefStatus === 'SUBMITTED');
-  if (!allPartiesSubmitted && dispute.parties.length > 1) {
-    throw new BadRequestError('All parties must submit their briefs before evaluation can start');
-  }
+  await prisma.dispute.update({
+    where: { id: disputeId },
+    data: { evaluationLock: true },
+  });
 
   const evaluators = getEvaluatorProviders();
   if (evaluators.length === 0) {
@@ -326,12 +331,18 @@ export async function dispatchEvaluators(disputeId: string): Promise<{
     }
     
     logger.info('Evaluation threshold met, aggregation attempted', { disputeId, successCount, finalState: completedDispute?.state });
+    
+    await prisma.dispute.update({
+      where: { id: disputeId },
+      data: { evaluationLock: false },
+    });
   } else {
     await prisma.dispute.update({
       where: { id: disputeId },
       data: {
         state: 'FAILED',
         stateChangedAt: new Date(),
+        evaluationLock: false,
       },
     });
 

@@ -8,6 +8,8 @@ import { apiClient } from '@/lib/api-client';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { DisputeStatusPanel } from '@/components/disputes/DisputeStatusPanel';
 
+const API_ROOT = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001').replace(/\/v1\/?$/, '');
+
 const STATE_COLORS: Record<string, string> = {
   DRAFT: 'bg-gray-100 text-gray-700',
   PAYMENT_PENDING: 'bg-orange-100 text-orange-700',
@@ -22,6 +24,7 @@ const STATE_COLORS: Record<string, string> = {
 };
 
 function StateBadge({ state }: { state: string }) {
+  if (!state) return <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-700">—</span>;
   return (
     <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${STATE_COLORS[state] || 'bg-gray-100 text-gray-700'}`}>
       {state.replace(/_/g, ' ')}
@@ -70,8 +73,10 @@ function WithdrawDialog({ open, onClose, onConfirm, isLoading }: {
 export default function DisputeDetailPage() {
   const params = useParams();
   const queryClient = useQueryClient();
-  const { user } = useAuthStore();
-  const [showWithdrawDialog, setShowWithdrawDialog] = useState(false);
+const { user, accessToken } = useAuthStore();
+const [showWithdrawDialog, setShowWithdrawDialog] = useState(false);
+const [isRunningAnalysis, setIsRunningAnalysis] = useState(false);
+const [runAnalysisError, setRunAnalysisError] = useState<string | null>(null);
 
   const disputeId = params.id as string;
 
@@ -97,6 +102,28 @@ export default function DisputeDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['dispute', disputeId] });
       queryClient.invalidateQueries({ queryKey: ['disputes'] });
       setShowWithdrawDialog(false);
+    },
+  });
+
+  const runAnalysisMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`${API_ROOT}/v1/disputes/${disputeId}/evaluate`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: { message: 'Failed to start analysis' } }));
+        throw new Error(err.error?.message || 'Failed to start analysis');
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dispute', disputeId] });
+      setRunAnalysisError(null);
+      window.location.href = `/dashboard/disputes/${disputeId}/analysis`;
+    },
+    onError: (err: any) => {
+      setRunAnalysisError(err.message || 'Failed to start analysis');
+      setIsRunningAnalysis(false);
     },
   });
 
@@ -156,6 +183,21 @@ export default function DisputeDetailPage() {
       </div>
 
       {/* Action Banners based on state */}
+      {isInitiator && dispute.state === 'DRAFT' && (
+        <div className="p-6 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-between">
+          <div>
+            <h3 className="text-gray-900 font-semibold text-lg">Draft Mode</h3>
+            <p className="text-gray-800 text-sm">Your dispute is in draft. Continue to the workspace to draft your brief and complete payment.</p>
+          </div>
+          <Link
+            href={`/dashboard/disputes/${disputeId}/draft`}
+            className="px-6 py-2 bg-gray-900 text-white font-semibold rounded-lg hover:bg-gray-800 transition-colors"
+          >
+            Open Workspace
+          </Link>
+        </div>
+      )}
+
       {isInitiator && dispute.state === 'PAYMENT_PENDING' && (
         <div className="p-6 rounded-lg bg-orange-50 border border-orange-200 flex items-center justify-between">
           <div>
@@ -163,10 +205,10 @@ export default function DisputeDetailPage() {
             <p className="text-orange-800 text-sm">You must complete your payment of ${Number(dispute.priceUsd).toFixed(2)} to activate this dispute.</p>
           </div>
           <Link
-            href={`/dashboard/disputes/${disputeId}/payment`}
+            href={`/dashboard/disputes/${disputeId}/draft`}
             className="px-6 py-2 bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-700 transition-colors"
           >
-            Pay ${Number(dispute.priceUsd).toFixed(2)}
+            Open Workspace
           </Link>
         </div>
       )}
@@ -204,14 +246,14 @@ export default function DisputeDetailPage() {
       {dispute.state === 'UNDER_ANALYSIS' && (
         <div className="p-6 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-between">
           <div>
-            <h3 className="text-blue-900 font-semibold text-lg">Analysis in Progress</h3>
-            <p className="text-blue-800 text-sm">Multiple AI models are currently reviewing the submitted briefs.</p>
+            <h3 className="text-blue-900 font-semibold text-lg">Generate Full Analysis</h3>
+            <p className="text-blue-800 text-sm">Your submitted briefs have been queued for evaluation. Open the progress page to track the multi-model analysis.</p>
           </div>
           <Link
             href={`/dashboard/disputes/${disputeId}/analysis`}
             className="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
           >
-            Track Progress
+            Generate Full Analysis
           </Link>
         </div>
       )}

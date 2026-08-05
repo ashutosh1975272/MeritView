@@ -6,6 +6,17 @@ import { apiClient } from '@/lib/api-client';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { DocumentUploader } from '@/components/DocumentUploader';
 import { DisputeStatusPanel } from '@/components/disputes/DisputeStatusPanel';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Progress } from '@/components/ui/progress';
+import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Bot, Send, Save, FileText, User, AlertCircle, CheckCircle2, Clock, Sparkles } from 'lucide-react';
 
 const SECTION_LABELS: Record<string, string> = {
   factualBackground: 'Factual Background',
@@ -32,12 +43,9 @@ function countWords(text: string): number {
   return text.trim().split(/\s+/).filter(w => w.length > 0).length;
 }
 
-const API_ROOT = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001').replace(/\/v1\/?$/, '');
-
 const ASSISTANT_MODELS = [
-  { label: 'GPT-4o', provider: 'openai', model: 'gpt-4o' },
-  { label: 'GPT-4o Mini', provider: 'openai', model: 'gpt-4o-mini' },
-  { label: 'Fallback', provider: 'fallback', model: 'fallback-local-v1' },
+  { label: 'Groq Fast', provider: 'groq', model: 'llama-3.1-8b-instant' },
+  { label: 'Groq Best', provider: 'groq', model: 'llama-3.3-70b-versatile' },
 ];
 
 export default function BriefPage() {
@@ -70,7 +78,7 @@ export default function BriefPage() {
   const [messages, setMessages] = useState<Array<{ role: string, content: string }>>([]);
   const [chatInput, setChatInput] = useState('');
   const [isChatLoading, setIsChatLoading] = useState(false);
-  const [assistantModel, setAssistantModel] = useState('openai/gpt-4o');
+  const [assistantModel, setAssistantModel] = useState('groq/llama-3.1-8b-instant');
   const chatScrollRef = useRef<HTMLDivElement>(null);
 
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -112,9 +120,11 @@ export default function BriefPage() {
       setMyRole(myParty.role);
 
       try {
-        const brief = await apiClient.getBrief(disputeId, myParty.id);
-        setSections(brief.sections);
-        setBriefStatus(brief.status);
+        const brief = await apiClient.getBriefMaybe(disputeId, myParty.id);
+        if (brief) {
+          setSections(brief.sections);
+          setBriefStatus(brief.status);
+        }
       } catch (err: any) {
         if (err.status !== 404) throw err;
       }
@@ -133,19 +143,9 @@ export default function BriefPage() {
     if (!accessToken) return;
     const [llmProvider, modelPreference] = selected.split('/');
     try {
-      const res = await fetch(`${API_ROOT}/v1/disputes/${disputeId}/parties/${pid}/brief/session`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ llmProvider, modelPreference })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setChatSessionId(data.session.id);
-        setMessages([{ role: 'assistant', content: data.initial_message || 'Hello! I am your AI assistant. Describe your dispute to me and I will help you draft your brief sections.' }]);
-      } else {
-        const data = await res.json().catch(() => null);
-        setMessages([{ role: 'assistant', content: data?.error?.message || 'I could not start the assistant session. Please retry or select another model.' }]);
-      }
+      const data = await apiClient.createBriefPrepSession(disputeId, pid, llmProvider, modelPreference);
+      setChatSessionId(data.session.id);
+      setMessages([{ role: 'assistant', content: data.initial_message || 'Hello! I am your AI assistant. Describe your dispute to me and I will help you draft your brief sections.' }]);
     } catch (e: any) {
       console.error('Failed to init chat', e);
       setMessages([{ role: 'assistant', content: e?.message || 'I could not start the assistant session. Please retry.' }]);
@@ -171,19 +171,8 @@ export default function BriefPage() {
     setIsChatLoading(true);
 
     try {
-      const res = await fetch(`${API_ROOT}/v1/disputes/${disputeId}/parties/${partyId}/brief/session/${chatSessionId}/message`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: userMsg })
-      });
-      
-      if (res.ok) {
-        const data = await res.json();
-        setMessages(prev => [...prev, { role: 'assistant', content: data.assistantMessage?.content || data.message?.content || 'I received your message.' }]);
-      } else {
-        const data = await res.json().catch(() => null);
-        throw new Error(data?.error?.message || 'Failed to send');
-      }
+      const data = await apiClient.sendBriefPrepMessage(disputeId, partyId, chatSessionId, userMsg);
+      setMessages(prev => [...prev, { role: 'assistant', content: data.assistantMessage?.content || data.message?.content || 'I received your message.' }]);
     } catch (err: any) {
       setMessages(prev => [...prev, { role: 'assistant', content: err?.message || 'Sorry, I encountered an error. Please try again.' }]);
     } finally {
@@ -239,6 +228,7 @@ export default function BriefPage() {
   const missingSections = SECTION_KEYS.filter(key => !sections[key] || sections[key].trim().length === 0);
   const canSubmit = allSectionsFilled && !isSubmitting && totalWordCount <= MAX_WORDS;
   const isSealed = briefStatus === 'SEALED' || briefStatus === 'SUBMITTED';
+  const wordProgress = Math.min((totalWordCount / MAX_WORDS) * 100, 100);
 
   if (isLoading) {
     return (
@@ -250,44 +240,50 @@ export default function BriefPage() {
 
   if (error && !sections.factualBackground) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center max-w-xl mx-auto">
-        <p className="text-red-700 font-medium">{error}</p>
-        <button onClick={loadExistingBrief} className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-md">Retry</button>
+      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 rounded-lg p-6 text-center max-w-xl mx-auto">
+        <p className="text-red-700 dark:text-red-400 font-medium">{error}</p>
+        <Button onClick={loadExistingBrief} className="mt-4">Retry</Button>
       </div>
     );
   }
 
   return (
-    <div className="flex h-[calc(100vh-80px)] overflow-hidden">
+    <div className="flex flex-col lg:flex-row h-[calc(100vh-80px)] overflow-hidden">
       {/* LEFT PANE: AI Chat Assistant */}
-      <div className="w-1/3 flex flex-col border-r border-border bg-card shadow-sm h-full rounded-tl-xl rounded-bl-xl overflow-hidden">
+      <div className="w-full lg:w-1/3 flex flex-col border-r border-border bg-card shadow-sm h-full rounded-tl-xl rounded-bl-xl overflow-hidden">
         <div className="p-4 border-b border-border bg-primary/5 flex items-center justify-between">
           <div>
             <h2 className="font-semibold text-lg flex items-center gap-2">
-              <span className="text-xl">🤖</span> AI Assistant
+              <Bot className="h-5 w-5 text-primary" aria-hidden="true" />
+              AI Assistant
             </h2>
             <p className="text-xs text-muted-foreground mt-0.5">Private to your side. The other party cannot see this chat.</p>
           </div>
-          <select
-            value={assistantModel}
-            onChange={(event) => handleAssistantModelChange(event.target.value)}
-            className="text-xs border-border bg-background rounded-md px-2 py-1"
-          >
-            {ASSISTANT_MODELS.map((model) => (
-              <option key={`${model.provider}/${model.model}`} value={`${model.provider}/${model.model}`}>
-                {model.label}
-              </option>
-            ))}
-          </select>
+          <div className="flex items-center gap-2">
+            <Label htmlFor="assistant-model" className="sr-only">Assistant Model</Label>
+            <select
+              id="assistant-model"
+              value={assistantModel}
+              onChange={(event) => handleAssistantModelChange(event.target.value)}
+              className="text-xs border-border bg-background rounded-md px-2 py-1"
+              aria-label="Assistant model"
+            >
+              {ASSISTANT_MODELS.map((model) => (
+                <option key={`${model.provider}/${model.model}`} value={`${model.provider}/${model.model}`}>
+                  {model.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
         
-        <div ref={chatScrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-muted/20">
+        <ScrollArea className="flex-1 p-4 space-y-4 bg-muted/20">
           {messages.map((msg, idx) => (
             <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div className={`max-w-[85%] rounded-xl px-4 py-2.5 text-sm ${
                 msg.role === 'user' 
                   ? 'bg-primary text-primary-foreground rounded-br-none' 
-                  : 'bg-white border border-border shadow-sm rounded-bl-none text-foreground'
+                  : 'bg-background border border-border shadow-sm rounded-bl-none'
               }`}>
                 {msg.content}
               </div>
@@ -295,7 +291,7 @@ export default function BriefPage() {
           ))}
           {isChatLoading && (
             <div className="flex justify-start">
-              <div className="bg-white border border-border rounded-xl rounded-bl-none px-4 py-3 shadow-sm">
+              <div className="bg-background border border-border rounded-xl rounded-bl-none px-4 py-3 shadow-sm">
                 <div className="flex gap-1">
                   <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" />
                   <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce delay-75" />
@@ -304,16 +300,18 @@ export default function BriefPage() {
               </div>
             </div>
           )}
-        </div>
+        </ScrollArea>
 
-        <form onSubmit={handleSendMessage} className="p-3 bg-white border-t border-border">
+        <form onSubmit={handleSendMessage} className="p-3 bg-background border-t border-border">
           <div className="flex items-end gap-2">
-            <textarea
+            <Textarea
+              id="chat-input"
               value={chatInput}
               onChange={e => setChatInput(e.target.value)}
               placeholder="Ask for help drafting a section..."
-              className="flex-1 max-h-32 min-h-[44px] bg-muted/50 border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+              className="flex-1 max-h-32 min-h-[44px] bg-muted/50 border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
               rows={1}
+              aria-label="Chat message"
               onKeyDown={e => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
@@ -321,158 +319,176 @@ export default function BriefPage() {
                 }
               }}
             />
-            <button
-              type="submit"
-              disabled={!chatInput.trim() || isChatLoading}
-              className="h-[44px] px-4 bg-primary text-primary-foreground font-medium rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
-            >
-              Send
-            </button>
+            <Button type="submit" disabled={!chatInput.trim() || isChatLoading} size="icon" aria-label="Send message">
+              <Send className="h-4 w-4" />
+            </Button>
           </div>
         </form>
       </div>
 
       {/* RIGHT PANE: Brief Editor */}
-      <div className="w-2/3 flex flex-col h-full bg-background relative">
+      <div className="w-full lg:w-2/3 flex flex-col h-full bg-background relative">
         
         {/* Header */}
-        <div className="p-5 border-b border-border bg-white flex items-center justify-between shadow-sm z-10 sticky top-0">
+        <div className="p-5 border-b border-border bg-background flex items-center justify-between shadow-sm z-10 sticky top-0">
           <div>
             <h1 className="text-xl font-bold">Brief Editor</h1>
             <div className="flex items-center gap-3 mt-1">
               {myRole && (
-                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                <Badge variant="secondary" className="gap-1">
+                  <User className="h-3 w-3" />
                   {myRole === 'INITIATOR' ? 'Party A / Initiator' : 'Party B / Respondent'}
-                </span>
+                </Badge>
               )}
-              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                briefStatus === 'DRAFT' ? 'bg-gray-100 text-gray-700' :
-                briefStatus === 'SUBMITTED' ? 'bg-blue-100 text-blue-700' :
-                'bg-green-100 text-green-700'
-              }`}>
+              <Badge variant={
+                briefStatus === 'DRAFT' ? 'outline' :
+                briefStatus === 'SUBMITTED' ? 'default' :
+                'secondary'
+              }>
                 {briefStatus || 'DRAFT'}
-              </span>
-              <span className="text-xs text-muted-foreground">
+              </Badge>
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <FileText className="h-3 w-3" />
                 Words: <span className={totalWordCount > WARNING_WORDS ? 'text-red-500 font-bold' : ''}>{totalWordCount}</span> / {MAX_WORDS}
               </span>
-              {lastSaved && <span className="text-xs text-muted-foreground ml-2">Saved {lastSaved.toLocaleTimeString()}</span>}
+              {lastSaved && <span className="text-xs text-muted-foreground flex items-center gap-1"><Clock className="h-3 w-3" />Saved {lastSaved.toLocaleTimeString()}</span>}
             </div>
+            <Progress value={wordProgress} className="h-1.5 mt-2" />
           </div>
 
           {!isSealed && (
             <div className="flex gap-2">
-              <button
+              <Button
+                variant="outline"
                 onClick={handleSaveDraft}
                 disabled={isSaving}
-                className="px-4 py-2 border border-border rounded-lg text-sm font-medium hover:bg-muted/50 disabled:opacity-50 transition-colors"
+                className="gap-2"
               >
+                <Save className="h-4 w-4" />
                 {isSaving ? 'Saving...' : 'Save Draft'}
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => setShowConfirmDialog(true)}
                 disabled={!canSubmit}
                 title={!allSectionsFilled ? 'Fill all five brief sections before submitting' : totalWordCount > MAX_WORDS ? 'Brief exceeds maximum word count' : 'Submit final sealed brief'}
-                className="px-5 py-2 rounded-lg text-sm font-semibold transition-colors bg-slate-950 text-white hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-500 disabled:cursor-not-allowed"
+                className="gap-2"
               >
+                <CheckCircle2 className="h-4 w-4" />
                 Submit Brief
-              </button>
+              </Button>
             </div>
           )}
         </div>
 
         {/* Form Fields */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-8">
-          {error && <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">{error}</div>}
-
-          <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
+        <ScrollArea className="flex-1 p-6">
           <div className="max-w-3xl space-y-8">
-            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
-              <strong>Your private workspace.</strong> Your draft and AI assistant messages are visible only to you until you submit your final sealed brief.
-            </div>
+            {error && (
+              <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-400 rounded-lg text-sm flex items-start gap-2">
+                <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                {error}
+              </div>
+            )}
+
+            <Card className="border-blue-200 dark:border-blue-900/50 bg-blue-50/50 dark:bg-blue-900/10">
+              <CardContent className="pt-4 pb-4">
+                <div className="flex items-start gap-3">
+                  <Sparkles className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-blue-900 dark:text-blue-300">Your private workspace</p>
+                    <p className="text-sm text-blue-700 dark:text-blue-400 mt-1">
+                      Your draft and AI assistant messages are visible only to you until you submit your final sealed brief.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             {SECTION_KEYS.map((key) => {
               const wordCount = countWords(sections[key]);
+              const isOverLimit = wordCount > WARNING_WORDS;
               return (
                 <div key={key} className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <label className="text-sm font-semibold">{SECTION_LABELS[key]}</label>
-                    <span className="text-xs text-muted-foreground">{wordCount} words</span>
+                    <Label htmlFor={key} className="text-sm font-semibold">{SECTION_LABELS[key]}</Label>
+                    <span className={`text-xs ${isOverLimit ? 'text-red-500 font-bold' : 'text-muted-foreground'}`}>
+                      {wordCount} words
+                    </span>
                   </div>
-                  <textarea
+                  <Textarea
+                    id={key}
                     value={sections[key]}
                     onChange={(e) => handleSectionChange(key, e.target.value)}
                     disabled={isSealed}
                     rows={6}
-                    className={`w-full px-4 py-3 border rounded-lg bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 resize-y ${
-                      isSealed ? 'opacity-60 cursor-not-allowed border-border' : 'border-border/60 shadow-sm'
-                    } ${wordCount > WARNING_WORDS ? 'border-red-400 focus:ring-red-500' : ''}`}
+                    className={`${isSealed ? 'opacity-60 cursor-not-allowed' : ''} ${isOverLimit ? 'border-red-400 focus-visible:ring-red-500' : ''}`}
                     placeholder={`Write your ${SECTION_LABELS[key].toLowerCase()} here, or ask the AI to help you draft it...`}
                   />
                 </div>
               );
             })}
 
-            <div className="pt-6 border-t border-border">
-              <h3 className="text-sm font-semibold mb-4">Supporting Documents</h3>
+            <Separator />
+
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold">Supporting Documents</h3>
               <DocumentUploader disputeId={disputeId} partyId={partyId || ''} isSealed={isSealed} />
             </div>
-            
+
             <div className="h-12" />
           </div>
+        </ScrollArea>
 
-          {dispute && (
-            <div className="hidden xl:block sticky top-24 h-fit">
-              <DisputeStatusPanel dispute={dispute} currentUserId={user?.id} />
-            </div>
-          )}
+        {dispute && (
+          <div className="hidden xl:block sticky top-24 h-fit">
+            <DisputeStatusPanel dispute={dispute} currentUserId={user?.id} />
           </div>
-        </div>
+        )}
       </div>
 
-      {showConfirmDialog && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-          <div className="bg-white rounded-xl shadow-xl p-6 max-w-md w-full">
-            <h2 className="text-xl font-bold mb-2">Submit Final Brief?</h2>
-            <p className="text-muted-foreground text-sm mb-6">
+      {/* Submit Confirmation Dialog */}
+      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Submit Final Brief?</DialogTitle>
+            <DialogDescription>
               This action cannot be undone. Once submitted, your brief will be permanently sealed until all parties have submitted.
-            </p>
+            </DialogDescription>
+          </DialogHeader>
 
-            <div className="rounded-lg border border-border bg-slate-50 p-3 text-sm mb-6">
-              <p className="font-medium text-slate-900 mb-2">Submission checklist</p>
-              <ul className="space-y-1">
+          <Card className="border-border bg-muted/30">
+            <CardContent className="pt-4">
+              <p className="font-medium text-sm mb-3">Submission checklist</p>
+              <ul className="space-y-2">
                 {SECTION_KEYS.map((key) => {
                   const complete = !missingSections.includes(key);
                   return (
-                    <li key={key} className={complete ? 'text-green-700' : 'text-red-600'}>
-                      {complete ? '✓' : '•'} {SECTION_LABELS[key]}
+                    <li key={key} className={`flex items-center gap-2 text-sm ${complete ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                      {complete ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+                      {SECTION_LABELS[key]}
                     </li>
                   );
                 })}
               </ul>
               {totalWordCount > MAX_WORDS && (
-                <p className="text-red-600 mt-2">Word count exceeds the {MAX_WORDS} word limit.</p>
+                <p className="text-red-600 dark:text-red-400 mt-3 text-sm flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4" />
+                  Word count exceeds the {MAX_WORDS} word limit.
+                </p>
               )}
-            </div>
+            </CardContent>
+          </Card>
 
-            <div className="flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setShowConfirmDialog(false)}
-                className="px-4 py-2 border border-slate-300 text-sm font-medium rounded-lg hover:bg-slate-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSubmit}
-                disabled={!canSubmit}
-                className="px-5 py-2 rounded-lg text-sm font-semibold bg-slate-950 text-white hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-500 disabled:cursor-not-allowed"
-              >
-                {isSubmitting ? 'Submitting...' : canSubmit ? 'Submit Final Brief' : 'Complete All Sections'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowConfirmDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSubmit} disabled={!canSubmit}>
+              {isSubmitting ? 'Submitting...' : canSubmit ? 'Submit Final Brief' : 'Complete All Sections'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
