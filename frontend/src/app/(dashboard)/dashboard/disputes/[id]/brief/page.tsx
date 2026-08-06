@@ -53,6 +53,7 @@ export default function BriefPage() {
   const router = useRouter();
   const { user, accessToken } = useAuthStore();
   const disputeId = params.id as string;
+  const [activeMobileView, setActiveMobileView] = useState<'assistant' | 'editor'>('assistant');
 
   const [sections, setSections] = useState<Record<string, string>>({
     factualBackground: '',
@@ -249,8 +250,32 @@ export default function BriefPage() {
 
   return (
     <div className="flex flex-col lg:flex-row h-[calc(100vh-80px)] overflow-hidden">
+      <div className="lg:hidden border-b border-border bg-background px-4 py-3">
+        <div className="grid grid-cols-2 gap-2">
+          <Button
+            type="button"
+            variant={activeMobileView === 'assistant' ? 'default' : 'outline'}
+            onClick={() => setActiveMobileView('assistant')}
+            className="gap-2"
+          >
+            <Bot className="h-4 w-4" />
+            AI Assistant
+          </Button>
+          <Button
+            type="button"
+            variant={activeMobileView === 'editor' ? 'default' : 'outline'}
+            onClick={() => setActiveMobileView('editor')}
+            className="gap-2"
+          >
+            <FileText className="h-4 w-4" />
+            Brief Editor
+          </Button>
+        </div>
+      </div>
+
+      <div className="flex-1 min-h-0 flex flex-col lg:flex-row">
       {/* LEFT PANE: AI Chat Assistant */}
-      <div className="w-full lg:w-1/3 flex flex-col border-r border-border bg-card shadow-sm h-full rounded-tl-xl rounded-bl-xl overflow-hidden">
+      <div className={`${activeMobileView === 'assistant' ? 'flex' : 'hidden'} lg:flex w-full lg:w-1/3 flex-col border-r border-border bg-card shadow-sm h-full rounded-tl-xl rounded-bl-xl overflow-hidden`}>
         <div className="p-4 border-b border-border bg-primary/5 flex items-center justify-between">
           <div>
             <h2 className="font-semibold text-lg flex items-center gap-2">
@@ -327,7 +352,7 @@ export default function BriefPage() {
       </div>
 
       {/* RIGHT PANE: Brief Editor */}
-      <div className="w-full lg:w-2/3 flex flex-col h-full bg-background relative">
+      <div className={`${activeMobileView === 'editor' ? 'flex' : 'hidden'} lg:flex w-full lg:w-2/3 flex-col h-full bg-background relative`}>
         
         {/* Header */}
         <div className="p-5 border-b border-border bg-background flex items-center justify-between shadow-sm z-10 sticky top-0">
@@ -444,6 +469,7 @@ export default function BriefPage() {
             <DisputeStatusPanel dispute={dispute} currentUserId={user?.id} />
           </div>
         )}
+      </div>
       </div>
 
       {/* Submit Confirmation Dialog */}
