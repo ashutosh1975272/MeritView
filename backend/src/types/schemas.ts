@@ -91,12 +91,12 @@ export const briefDraftSchema = z.object({
 export const briefSubmitSchema = z.object({
   body: z.object({
     sections: z.object({
-      factualBackground: z.string().min(1).max(5000),
-      myPosition: z.string().min(1).max(5000),
-      supportingArguments: z.string().min(1).max(5000),
-      acknowledgmentOfOpposing: z.string().min(1).max(5000),
-      desiredResolution: z.string().min(1).max(5000),
-    }),
+      factualBackground: z.string().max(5000).optional(),
+      myPosition: z.string().max(5000).optional(),
+      supportingArguments: z.string().max(5000).optional(),
+      acknowledgmentOfOpposing: z.string().max(5000).optional(),
+      desiredResolution: z.string().max(5000).optional(),
+    }).partial(),
     supportingDocumentIds: z.array(z.string().regex(/^([a-z]+_[a-f0-9]{8}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i)).optional(),
   }),
   params: z.object({
