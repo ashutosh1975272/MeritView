@@ -79,7 +79,7 @@ function expressRawBody() {
       data += chunk;
     });
     req.on('end', () => {
-      req.body = data;
+      req.body = Buffer.from(data);
       next();
     });
   };

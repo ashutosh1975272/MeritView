@@ -121,8 +121,12 @@ export const useAuthStore = create<AuthState>()(
           });
 
           if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error?.message || 'Registration failed');
+            const error = await response.json().catch(() => ({ error: { message: 'Registration failed' } }));
+            const err = new Error(error.error?.message || 'Registration failed') as any;
+            err.status = response.status;
+            err.code = error.error?.code;
+            err.details = error.error?.details;
+            throw err;
           }
 
           const result = await response.json();

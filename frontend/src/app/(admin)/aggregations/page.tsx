@@ -4,6 +4,14 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Skeleton } from '@/components/ui/skeleton';
+import { AlertTriangle, ChevronDown, ChevronUp, Send, Eye, CheckCircle2 } from 'lucide-react';
 
 const DISCLAIMERS = [
   'This analysis is for informational purposes only and does not constitute legal advice.',
@@ -73,95 +81,95 @@ function PublishForm({ disputeId, onComplete }: { disputeId: string; onComplete:
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium mb-1">Decision</label>
-        <input
+      <div className="space-y-2">
+        <Label htmlFor="decision">Decision</Label>
+        <Input
+          id="decision"
           value={decision}
           onChange={(e) => setDecision(e.target.value)}
-          className="w-full px-3 py-2 border border-border rounded-md text-sm bg-background font-medium"
           placeholder="e.g. IN_FAVOR_OF_RESPONDENT"
+          className="font-medium"
         />
       </div>
-      <div>
-        <label className="block text-sm font-medium mb-1">Ruling</label>
-        <textarea
+      <div className="space-y-2">
+        <Label htmlFor="ruling">Ruling</Label>
+        <Textarea
+          id="ruling"
           value={ruling}
           onChange={(e) => setRuling(e.target.value)}
           rows={2}
-          className="w-full px-3 py-2 border border-border rounded-md text-sm bg-background"
           placeholder="Brief summary of the ruling..."
         />
       </div>
-      <div>
-        <label className="block text-sm font-medium mb-1">Reasoning</label>
-        <textarea
+      <div className="space-y-2">
+        <Label htmlFor="reasoning">Reasoning</Label>
+        <Textarea
+          id="reasoning"
           value={reasoning}
           onChange={(e) => setReasoning(e.target.value)}
           rows={5}
-          className="w-full px-3 py-2 border border-border rounded-md text-sm bg-background"
           placeholder="Detailed reasoning..."
         />
       </div>
-      <div>
-        <label className="block text-sm font-medium mb-1">Applicable Law (Optional)</label>
-        <textarea
+      <div className="space-y-2">
+        <Label htmlFor="applicableLaw">Applicable Law (Optional)</Label>
+        <Textarea
+          id="applicableLaw"
           value={applicableLaw}
           onChange={(e) => setApplicableLaw(e.target.value)}
           rows={2}
-          className="w-full px-3 py-2 border border-border rounded-md text-sm bg-background"
           placeholder="Laws or precedents applied..."
         />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium mb-1">Inter-Evaluator Agreement (0-1)</label>
-          <input
+        <div className="space-y-2">
+          <Label htmlFor="agreement">Inter-Evaluator Agreement (0-1)</Label>
+          <Input
+            id="agreement"
             type="number"
             step="0.001"
             min="0"
             max="1"
             value={agreement}
             onChange={(e) => setAgreement(e.target.value)}
-            className="w-full px-3 py-2 border border-border rounded-md text-sm bg-background"
             placeholder="Auto-calculated if empty"
           />
         </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Overall Confidence (0-1)</label>
-          <input
+        <div className="space-y-2">
+          <Label htmlFor="confidence">Overall Confidence (0-1)</Label>
+          <Input
+            id="confidence"
             type="number"
             step="0.001"
             min="0"
             max="1"
             value={confidence}
             onChange={(e) => setConfidence(e.target.value)}
-            className="w-full px-3 py-2 border border-border rounded-md text-sm bg-background"
             placeholder="Auto-calculated if empty"
           />
         </div>
       </div>
 
-      <div className="p-3 bg-blue-50 border border-blue-200 rounded text-xs text-blue-700">
-        <p className="font-medium mb-1">Standard disclaimers will be appended:</p>
-        <ul className="list-disc list-inside space-y-0.5">
-          {DISCLAIMERS.map((d, i) => (
-            <li key={i}>{d}</li>
-          ))}
-        </ul>
-      </div>
+      <Card className="border-blue-200 dark:border-blue-900/50 bg-blue-50/50 dark:bg-blue-900/10">
+        <CardContent className="pt-4">
+          <p className="text-sm font-medium text-blue-900 dark:text-blue-300 mb-2">Standard disclaimers will be appended:</p>
+          <ul className="list-disc list-inside space-y-1 text-xs text-blue-700 dark:text-blue-400">
+            {DISCLAIMERS.map((d, i) => (
+              <li key={i}>{d}</li>
+            ))}
+          </ul>
+        </CardContent>
+      </Card>
 
       {error && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded text-sm text-red-600">{error}</div>
+        <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 rounded-lg text-sm">{error}</div>
       )}
 
-      <button
-        type="submit"
-        disabled={publishMutation.isPending}
-        className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors"
-      >
+        <Button type="submit" disabled={publishMutation.isPending} className="gap-2">
+        <Send className="h-4 w-4" />
         {publishMutation.isPending ? 'Publishing...' : 'Publish Opinion'}
-      </button>
+      </Button>
     </form>
   );
 }
@@ -202,38 +210,53 @@ export default function AdminAggregationsPage() {
       </div>
 
       {actionMsg && (
-        <div className={`p-3 rounded-lg text-sm ${
-          actionMsg.includes('Failed') ? 'bg-red-50 border border-red-200 text-red-600' : 'bg-green-50 border border-green-200 text-green-700'
-        }`}>
-          {actionMsg}
-        </div>
+        <Card className={`border ${actionMsg.includes('Failed') ? 'border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-900/10' : 'border-green-200 dark:border-green-900/50 bg-green-50 dark:bg-green-900/10'}`}>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2">
+              {actionMsg.includes('Failed') ? <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" /> : <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />}
+              <p className={`text-sm font-medium ${actionMsg.includes('Failed') ? 'text-red-700 dark:text-red-400' : 'text-green-700 dark:text-green-400'}`}>{actionMsg}</p>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {isLoading && (
-        <div className="space-y-3 animate-pulse">
+        <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="p-4 border border-border rounded-lg">
-              <div className="h-5 bg-gray-200 rounded w-3/4 mb-2" />
-              <div className="h-4 bg-gray-200 rounded w-1/2" />
-            </div>
+            <Card key={i}>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-4">
+                  <Skeleton className="h-5 w-3/4" />
+                  <Skeleton className="h-6 w-24" />
+                </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
       )}
 
       {isError && (
-        <div className="p-6 border border-red-200 bg-red-50 rounded-lg text-center">
-          <p className="text-red-600 font-medium">Failed to load pending aggregations</p>
-          <p className="text-red-500 text-sm mt-1">{(error as any)?.message || 'An unexpected error occurred'}</p>
-        </div>
+        <Card className="border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-900/10">
+          <CardContent className="pt-6 text-center">
+            <p className="text-red-600 dark:text-red-400 font-medium">Failed to load pending aggregations</p>
+            <p className="text-red-500 dark:text-red-400 text-sm mt-1">{(error as any)?.message || 'An unexpected error occurred'}</p>
+            <Button variant="outline" onClick={() => window.location.reload()} className="mt-4">
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
       )}
 
       {data && data.pending.length === 0 && (
-        <div className="p-12 border border-border rounded-lg bg-card text-center">
-          <p className="text-muted-foreground text-lg mb-2">No pending aggregations</p>
-          <p className="text-muted-foreground text-sm">
-            All completed disputes have been aggregated. Check back when new evaluations finish.
-          </p>
-        </div>
+        <Card>
+          <CardContent className="pt-12 pb-12 text-center">
+            <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-4" />
+            <p className="text-muted-foreground text-lg mb-2">No pending aggregations</p>
+            <p className="text-muted-foreground text-sm">
+              All completed disputes have been aggregated. Check back when new evaluations finish.
+            </p>
+          </CardContent>
+        </Card>
       )}
 
       {data && data.pending.length > 0 && (
@@ -243,7 +266,7 @@ export default function AdminAggregationsPage() {
           </div>
 
           {data.pending.map((item: any) => (
-            <div key={item.id} className="border border-border rounded-lg bg-card overflow-hidden">
+            <Card key={item.id} className="overflow-hidden">
               <div
                 className="p-4 flex items-center justify-between cursor-pointer hover:bg-muted/30 transition-colors"
                 onClick={() => setExpandedId(expandedId === item.id ? null : item.id)}
@@ -263,9 +286,9 @@ export default function AdminAggregationsPage() {
                   >
                     View dispute
                   </Link>
-                  <span className="text-muted-foreground text-xs">
-                    {expandedId === item.id ? '▲' : '▼'}
-                  </span>
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                    {expandedId === item.id ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  </Button>
                 </div>
               </div>
 
@@ -282,7 +305,7 @@ export default function AdminAggregationsPage() {
                   />
                 </div>
               )}
-            </div>
+            </Card>
           ))}
         </div>
       )}

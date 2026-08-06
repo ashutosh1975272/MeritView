@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { authMiddleware, AuthenticatedRequest, requireEmailVerified } from '../../middleware/auth.js';
 import { validate } from '../../middleware/validate.js';
 import { createEvaluationJob, getEvaluationStatus } from '../../services/evaluation/index.js';
-import { verifyDisputeOwnership } from '../../services/disputes/index.js';
+import { verifyDisputeAccess, verifyDisputeOwnership } from '../../services/disputes/index.js';
 import { addEvaluationJob } from '../../jobs/queues.js';
 
 const router: Router = Router();
@@ -15,7 +15,7 @@ const disputeIdParam = z.object({
 });
 
 router.post(
-  '/v1/disputes/:disputeId/evaluate',
+  '/disputes/:disputeId/evaluate',
   authMiddleware(),
   requireEmailVerified,
   validate(disputeIdParam),
@@ -41,15 +41,14 @@ router.post(
 );
 
 router.get(
-  '/v1/disputes/:disputeId/evaluation/status',
+  '/disputes/:disputeId/evaluation/status',
   authMiddleware(),
-  requireEmailVerified,
   validate(disputeIdParam),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const { disputeId } = req.params;
 
-      await verifyDisputeOwnership(disputeId, req.user!.id);
+      await verifyDisputeAccess(disputeId, req.user!.id);
 
       const status = await getEvaluationStatus(disputeId);
 

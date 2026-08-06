@@ -191,8 +191,12 @@ export async function registerUser(data: {
   await redis.setex(`pending_reg:${normalizedEmail}`, VERIFICATION_TOKEN_TTL, JSON.stringify(pendingUser));
 
   await addEmailJob('verification', normalizedEmail, { token: otp });
-  require('fs').writeFileSync('/tmp/latest_otp.txt', otp);
-  console.log(`[E2E-OTP-TEST] Generated OTP for ${normalizedEmail}: ${otp}`);
+  
+  // Store OTP in debug key for E2E testing (dev only)
+  if (env.NODE_ENV !== 'production') {
+    await redis.setex(`debug:otp:${normalizedEmail}`, 600, JSON.stringify({ otp, email: normalizedEmail }));
+  }
+  
   logger.info('Verification OTP queued', { email: normalizedEmail });
 
   return { status: 'pending_verification' };
@@ -271,6 +275,11 @@ export async function resendVerification(email: string): Promise<void> {
   await redis.setex(`pending_reg:${normalizedEmail}`, VERIFICATION_TOKEN_TTL, JSON.stringify(pendingData));
   await addEmailJob('verification', normalizedEmail, { token: otp });
   await recordOtpResend(normalizedEmail);
+  
+  if (env.NODE_ENV !== 'production') {
+    await redis.setex(`debug:otp:${normalizedEmail}`, 600, JSON.stringify({ otp, email: normalizedEmail }));
+  }
+  
   logger.info('Verification OTP resent', { email: normalizedEmail });
 }
 

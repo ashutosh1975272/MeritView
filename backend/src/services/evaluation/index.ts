@@ -71,31 +71,62 @@ interface EvalProvider {
   modelId: string;
 }
 
-function getEvaluatorProviders(): EvalProvider[] {
+function getProviderPriority(name: string): number {
+  if (name === 'groq') return 0;
+  if (name === 'fallback') return 2;
+  return 1;
+}
+
+export async function getEvaluatorProviders(): Promise<EvalProvider[]> {
   const MAX_EVALUATORS = 5;
   const providers: EvalProvider[] = [];
+
   const registered = providerRegistry.getNames()
     .map((name) => ({ name, provider: providerRegistry.get(name) }))
-    .map(({ name, provider }) => ({ name, provider, models: provider.getCapabilities().supportedModels }));
+    .map(({ name, provider }) => ({
+      name,
+      provider,
+      models: provider.getCapabilities().supportedModels,
+    }));
 
-  for (const { name, provider, models } of registered) {
+  const realProviders = registered.filter(({ name }) => name !== 'fallback');
+  const healthChecks = await Promise.allSettled(
+    realProviders.map(async ({ name, provider, models }) => ({
+      name,
+      provider,
+      models,
+      health: await provider.healthCheck(),
+    }))
+  );
+
+  const healthyProviders = healthChecks
+    .flatMap((result) => {
+      if (result.status !== 'fulfilled') {
+        return [];
+      }
+      return result.value.health.healthy ? [result.value] : [];
+    })
+    .sort((a, b) => {
+      const priorityDiff = getProviderPriority(a.name) - getProviderPriority(b.name);
+      if (priorityDiff !== 0) return priorityDiff;
+      return a.name.localeCompare(b.name);
+    });
+
+  for (const { name, provider, models } of healthyProviders) {
     if (models[0]) {
       providers.push({ name, provider, modelId: models[0] });
     }
-    if (providers.length >= MAX_EVALUATORS) break;
+    if (providers.length >= MAX_EVALUATORS) return providers;
   }
 
-  if (providers.length < MAX_EVALUATORS) {
-    for (const { name, provider, models } of registered) {
-      for (const model of models.slice(1)) {
-        providers.push({ name, provider, modelId: model });
-        if (providers.length >= MAX_EVALUATORS) break;
-      }
-      if (providers.length >= MAX_EVALUATORS) break;
+  if (providers.length < MAX_EVALUATORS && registered.some(({ name }) => name === 'fallback')) {
+    const fallback = registered.find(({ name }) => name === 'fallback');
+    if (fallback?.models[0]) {
+      providers.push({ name: fallback.name, provider: fallback.provider, modelId: fallback.models[0] });
     }
   }
 
-  return providers;
+  return providers.slice(0, MAX_EVALUATORS);
 }
 
 export async function createEvaluationJob(disputeId: string): Promise<void> {
@@ -133,7 +164,7 @@ export async function createEvaluationJob(disputeId: string): Promise<void> {
     data: { evaluationLock: true },
   });
 
-  const evaluators = getEvaluatorProviders();
+  const evaluators = await getEvaluatorProviders();
   if (evaluators.length === 0) {
     throw new InternalError('No LLM providers configured for evaluation');
   }
@@ -179,7 +210,7 @@ export async function dispatchEvaluators(disputeId: string): Promise<{
   const combinedPrompt = briefContents.join('\n\n---\n\n');
   const fullPrompt = `Dispute: ${dispute.title}\n\n${dispute.summary ? `Summary: ${dispute.summary}\n\n` : ''}Briefs:\n\n${combinedPrompt}`;
 
-  const evaluators = getEvaluatorProviders();
+  const evaluators = await getEvaluatorProviders();
   const dispatchTasks = evaluators.map(({ name, provider, modelId }) => {
     return async (): Promise<DispatchResult> => {
       for (let attempt = 1; attempt <= 3; attempt++) {

@@ -13,7 +13,10 @@ export function validate(schema: AnyZodObject) {
       next();
     } catch (error) {
       if (error instanceof ZodError) {
-        next(new BadRequestError('Validation failed', { issues: error.errors }));
+        next(new BadRequestError('Validation failed', {
+          issues: error.errors,
+          fieldErrors: error.flatten().fieldErrors,
+        }));
       } else {
         next(error);
       }

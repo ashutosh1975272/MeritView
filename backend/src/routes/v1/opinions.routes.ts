@@ -79,7 +79,7 @@ async function sseAuthMiddleware(
 }
 
 router.get(
-  '/v1/disputes/:disputeId/opinion',
+  '/disputes/:disputeId/opinion',
   authMiddleware(),
   validate(disputeIdParam),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -93,7 +93,7 @@ router.get(
 );
 
 router.get(
-  '/v1/disputes/:disputeId/opinion/pdf',
+  '/disputes/:disputeId/opinion/pdf',
   authMiddleware(),
   validate(disputeIdParam),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -116,7 +116,7 @@ router.get(
 );
 
 router.get(
-  '/v1/disputes/:disputeId/opinion/status',
+  '/disputes/:disputeId/opinion/status',
   authMiddleware(),
   validate(disputeIdParam),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -130,7 +130,7 @@ router.get(
 );
 
 router.get(
-  '/v1/disputes/:disputeId/opinion/stream',
+  '/disputes/:disputeId/opinion/stream',
   sseAuthMiddleware,
   validate(disputeIdParam),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {

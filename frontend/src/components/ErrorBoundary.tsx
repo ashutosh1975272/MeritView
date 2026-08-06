@@ -1,6 +1,8 @@
 'use client';
 
 import { Component, type ReactNode } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 
 interface Props {
   children: ReactNode;
@@ -38,33 +40,34 @@ export class ErrorBoundary extends Component<Props, State> {
 
       return (
         <div className="min-h-[400px] flex items-center justify-center p-8">
-          <div className="text-center max-w-md">
-            <div className="text-4xl mb-4" aria-hidden="true">⚠️</div>
-            <h2 className="text-xl font-semibold mb-2">Something went wrong</h2>
-            <p className="text-muted-foreground mb-6">
-              An unexpected error occurred. Please try refreshing the page.
-            </p>
-            <div className="flex items-center justify-center gap-3">
-              <button
-                onClick={() => window.location.reload()}
-                className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors text-sm font-medium"
-              >
-                Refresh page
-              </button>
-              <button
-                onClick={() => this.setState({ hasError: false, error: null })}
-                className="px-4 py-2 border border-border rounded-md hover:bg-accent transition-colors text-sm font-medium"
-              >
-                Try again
-              </button>
-            </div>
-            {process.env.NODE_ENV === 'development' && this.state.error && (
-              <pre className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg text-xs text-left text-red-600 overflow-auto max-h-48">
-                {this.state.error.message}
-                {this.state.error.stack && `\n\n${this.state.error.stack}`}
-              </pre>
-            )}
-          </div>
+          <Card className="max-w-md w-full">
+            <CardContent className="pt-6 text-center">
+              <div className="text-4xl mb-4" aria-hidden="true">⚠️</div>
+              <h2 className="text-xl font-semibold mb-2">Something went wrong</h2>
+              <p className="text-muted-foreground mb-6">
+                An unexpected error occurred. Please try refreshing the page.
+              </p>
+              <div className="flex items-center justify-center gap-3">
+                <Button
+                  onClick={() => window.location.reload()}
+                >
+                  Refresh page
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => this.setState({ hasError: false, error: null })}
+                >
+                  Try again
+                </Button>
+              </div>
+              {process.env.NODE_ENV === 'development' && this.state.error && (
+                <pre className="mt-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 rounded-lg text-xs text-left text-red-600 dark:text-red-400 overflow-auto max-h-48">
+                  {this.state.error.message}
+                  {this.state.error.stack && `\n\n${this.state.error.stack}`}
+                </pre>
+              )}
+            </CardContent>
+          </Card>
         </div>
       );
     }

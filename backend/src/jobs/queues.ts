@@ -39,7 +39,7 @@ export async function addEvaluationJob(disputeId: string, userId: string): Promi
     'evaluate-dispute',
     { disputeId, userId },
     {
-      jobId: `eval:${disputeId}`,
+      jobId: `eval-${disputeId}`,
       removeOnFail: false,
     }
   );

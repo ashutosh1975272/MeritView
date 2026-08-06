@@ -1,5 +1,8 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
+import { Providers } from '@/components/Providers';
+import { Toaster } from '@/components/ui/toast';
+import { cn } from "@/lib/utils";
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
@@ -19,7 +22,7 @@ export const metadata: Metadata = {
     url: '/',
     siteName: 'MeritView',
     title: 'MeritView — AI Decision Support for Disputes',
-    description: 'Get structured, impartial analysis of everyday disputes from multiple AI models. Standard analysis starts at $99.',
+    description: 'Get structured, impartial analysis of everyday disputes from multiple AI models. Standard analysis starts at $99. Decision support, not legal advice.',
     images: [
       {
         url: '/og-image.png',
@@ -32,7 +35,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'MeritView — AI Decision Support for Disputes',
-    description: 'Get structured, impartial analysis of everyday disputes from multiple AI models. Standard analysis starts at $99.',
+    description: 'Get structured, impartial analysis of everyday disputes from multiple AI models. Standard analysis starts at $99. Decision support, not legal advice.',
     images: ['/og-image.png'],
   },
   robots: {
@@ -58,15 +61,13 @@ export const viewport: Viewport = {
   maximumScale: 5,
 };
 
-import { Providers } from '@/components/Providers';
-
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${inter.variable} antialiased`}>
+    <html lang="en" className={cn("antialiased", inter.variable)} suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -76,10 +77,12 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-background font-sans text-foreground">
         <Providers>
-          <a href="#main-content" className="skip-link">
-            Skip to main content
-          </a>
-          {children}
+          <Toaster>
+            <a href="#main-content" className="skip-link">
+              Skip to main content
+            </a>
+            {children}
+          </Toaster>
         </Providers>
       </body>
     </html>

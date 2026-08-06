@@ -14,6 +14,9 @@ vi.mock('../../db/prisma', () => {
       findUnique: vi.fn(),
       update: vi.fn(),
     },
+    payment: {
+      findFirst: vi.fn(),
+    },
     user: {
       findUnique: vi.fn(),
       create: vi.fn(),
@@ -65,8 +68,80 @@ describe('Invitations Service', () => {
       }
       return args(prisma);
     });
+    (prisma.payment.findFirst as any).mockResolvedValue(null);
     (prisma.invitation.upsert as any).mockResolvedValue({ id: 'invitation_123', partyId: 'party_123' });
     (prisma.invitationEvent.create as any).mockResolvedValue({ id: 'event_123', invitationId: 'invitation_123', eventType: 'SENT' });
+  });
+
+  describe('createInvitation', () => {
+    const mockDispute = {
+      id: 'dispute_123',
+      title: 'Test Dispute',
+      state: 'DRAFT',
+      initiatorUserId: 'user_123',
+      initiator: { displayName: 'Test Initiator' },
+      parties: [],
+    };
+
+    it('should create and send an invitation immediately for a new counterparty', async () => {
+      (prisma.dispute.findUnique as any).mockResolvedValue(mockDispute);
+      (prisma.user.findUnique as any).mockResolvedValue(null);
+      (prisma.party.create as any).mockResolvedValue({
+        id: 'party_123',
+        disputeId: 'dispute_123',
+        invitationEmail: 'counterparty@example.com',
+        invitationStatus: 'PENDING',
+      });
+
+      const result = await createInvitation('dispute_123', 'counterparty@example.com', 'user_123');
+
+      expect(result.status).toBe('PENDING');
+      expect(prisma.party.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            invitationEmail: 'counterparty@example.com',
+            invitationStatus: 'PENDING',
+          }),
+        })
+      );
+    });
+
+    it('should reuse an expired invitation slot when reinviting another person', async () => {
+      (prisma.dispute.findUnique as any).mockResolvedValue({
+        ...mockDispute,
+        parties: [{
+          id: 'party_123',
+          invitationStatus: 'EXPIRED',
+          invitationEmail: 'old@example.com',
+        }],
+      });
+      (prisma.user.findUnique as any).mockResolvedValue(null);
+      (prisma.party.update as any).mockResolvedValue({
+        id: 'party_123',
+        disputeId: 'dispute_123',
+        invitationEmail: 'new@example.com',
+        invitationStatus: 'PENDING',
+      });
+
+      const result = await createInvitation('dispute_123', 'new@example.com', 'user_123');
+
+      expect(result.email).toBe('new@example.com');
+      expect(prisma.party.update).toHaveBeenCalled();
+      expect(prisma.party.create).not.toHaveBeenCalled();
+    });
+
+    it('should block sending a second active invitation', async () => {
+      (prisma.dispute.findUnique as any).mockResolvedValue({
+        ...mockDispute,
+        parties: [{
+          id: 'party_123',
+          invitationStatus: 'PENDING',
+          invitationEmail: 'active@example.com',
+        }],
+      });
+
+      await expect(createInvitation('dispute_123', 'other@example.com', 'user_123')).rejects.toThrow(ConflictError);
+    });
   });
 
   describe('acceptInvitation', () => {
@@ -80,6 +155,10 @@ describe('Invitations Service', () => {
       dispute: { id: 'dispute_123', title: 'Test Dispute' },
     };
 
+    beforeEach(() => {
+      (prisma.payment.findFirst as any).mockResolvedValue(null);
+    });
+
     it('should accept invitation for existing user', async () => {
       (prisma.party.findUnique as any).mockResolvedValue(mockParty);
       (prisma.user.findUnique as any).mockResolvedValue({ id: 'user_456', email: 'respondent@example.com' });
@@ -89,7 +168,7 @@ describe('Invitations Service', () => {
       expect(result.message).toBe('Invitation accepted');
       expect(result.disputeId).toBe('dispute_123');
       expect(prisma.party.update).toHaveBeenCalled();
-      expect(prisma.dispute.update).toHaveBeenCalled();
+      expect(prisma.dispute.update).not.toHaveBeenCalled();
     });
 
     it('should create guest user on accept when no account exists and displayName provided', async () => {

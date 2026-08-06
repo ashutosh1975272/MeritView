@@ -142,6 +142,7 @@ class ApiClient {
       const err = new Error(error.error?.message || 'Request failed') as any;
       err.status = response.status;
       err.code = error.error?.code;
+      err.details = error.error?.details;
       throw err;
     }
 

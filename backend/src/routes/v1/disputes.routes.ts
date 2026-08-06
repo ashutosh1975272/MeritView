@@ -118,8 +118,9 @@ router.get(
   validate(disputeIdParamsSchema),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
+      const { role } = await verifyDisputeAccess(req.params.disputeId, req.user!.id);
       const dispute = await getDispute(req.params.disputeId, req.user!.id);
-      res.json(dispute);
+      res.json({ role, dispute });
     } catch (error) {
       next(error);
     }

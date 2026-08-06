@@ -6,9 +6,15 @@ import Link from 'next/link';
 import { loadStripe, StripeElementsOptions } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { apiClient } from '@/lib/api-client';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { CheckCircle2, AlertTriangle, ArrowLeft, Sparkles } from 'lucide-react';
 
 const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PK;
 const stripePromise = stripePublishableKey ? loadStripe(stripePublishableKey) : null;
+const isDemoMode = !stripePublishableKey || stripePublishableKey.includes('demo') || stripePublishableKey.includes('placeholder');
 
 function PaymentForm({ disputeId, amount, onSuccess, onError }: {
   disputeId: string;
@@ -22,11 +28,8 @@ function PaymentForm({ disputeId, amount, onSuccess, onError }: {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!stripe || !elements) return;
-
     setIsProcessing(true);
-
     const { error, paymentIntent } = await stripe.confirmPayment({
       elements,
       confirmParams: {
@@ -34,13 +37,11 @@ function PaymentForm({ disputeId, amount, onSuccess, onError }: {
       },
       redirect: 'if_required',
     });
-
     if (error) {
       onError(error.message || 'Payment failed');
       setIsProcessing(false);
       return;
     }
-
     if (paymentIntent && paymentIntent.status === 'succeeded') {
       try {
         await apiClient.confirmPayment(disputeId, paymentIntent.id);
@@ -49,21 +50,65 @@ function PaymentForm({ disputeId, amount, onSuccess, onError }: {
         onError(err.message || 'Failed to confirm payment');
       }
     }
-
     setIsProcessing(false);
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <PaymentElement />
-      <button
+      <Button
         type="submit"
+        className="w-full"
         disabled={!stripe || isProcessing}
-        className="w-full px-6 py-3 bg-primary text-primary-foreground font-medium rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         {isProcessing ? 'Processing Payment...' : `Pay $${(amount / 100).toFixed(2)} & Continue`}
-      </button>
+      </Button>
     </form>
+  );
+}
+
+function DemoPaymentForm({ disputeId, amount, onSuccess, onError }: {
+  disputeId: string;
+  amount: number;
+  onSuccess: () => void;
+  onError: (message: string) => void;
+}) {
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const handleDemoPay = async () => {
+    setIsProcessing(true);
+    try {
+      const result = await apiClient.createPaymentIntent(disputeId);
+      const paymentIntentId = result.paymentIntentId || `pi_mock_${Date.now()}`;
+      await apiClient.confirmPayment(disputeId, paymentIntentId);
+      onSuccess();
+    } catch (err: any) {
+      onError(err.message || 'Demo payment failed');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-900/50 rounded-lg">
+        <Sparkles className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+        <div>
+          <p className="text-sm font-medium text-blue-900 dark:text-blue-300">Demo Mode Active</p>
+          <p className="text-sm text-blue-700 dark:text-blue-400 mt-1">
+            Click below to simulate a successful payment and activate your dispute.
+          </p>
+        </div>
+      </div>
+      <Button
+        type="button"
+        onClick={handleDemoPay}
+        disabled={isProcessing}
+        className="w-full"
+      >
+        {isProcessing ? 'Processing Demo Payment...' : `Pay $${(amount / 100).toFixed(2)} (Demo)`}
+      </Button>
+    </div>
   );
 }
 
@@ -111,16 +156,14 @@ export default function PaymentPage() {
   if (success) {
     return (
       <div className="max-w-lg mx-auto mt-12 p-8 text-center animate-fade-in">
-        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <svg className="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
+        <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+          <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-400" />
         </div>
         <h1 className="text-2xl font-bold mb-2">Payment Successful!</h1>
         <p className="text-muted-foreground mb-6">Your dispute workflow is active. Analysis will begin after both briefs are submitted.</p>
-        <div className="animate-pulse">
-          <div className="h-2 bg-gray-200 rounded w-3/4 mx-auto mb-2" />
-          <div className="h-2 bg-gray-200 rounded w-1/2 mx-auto" />
+        <div className="animate-pulse space-y-2">
+          <div className="h-2 bg-muted rounded w-3/4 mx-auto" />
+          <div className="h-2 bg-muted rounded w-1/2 mx-auto" />
         </div>
         <p className="text-sm text-muted-foreground mt-4">Redirecting to dispute page...</p>
       </div>
@@ -129,19 +172,23 @@ export default function PaymentPage() {
 
   if (isLoading) {
     return (
-      <div className="max-w-lg mx-auto mt-12 animate-fade-in">
-        <div className="animate-pulse space-y-6">
-          <div className="h-8 bg-gray-200 rounded w-1/3" />
-          <div className="h-4 bg-gray-200 rounded w-1/2" />
-          <div className="h-48 bg-gray-200 rounded" />
-          <div className="h-12 bg-gray-200 rounded" />
+      <div className="max-w-lg mx-auto mt-12 space-y-6 animate-fade-in">
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-8 w-48" />
         </div>
+        <Card>
+          <CardContent className="pt-6 space-y-4">
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-12 w-full" />
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   const options: StripeElementsOptions = {
-    clientSecret: clientSecret || undefined,
+    clientSecret: clientSecret ?? undefined,
     appearance: {
       theme: 'stripe',
       variables: {
@@ -151,60 +198,112 @@ export default function PaymentPage() {
   };
 
   return (
-    <div className="max-w-lg mx-auto mt-12 animate-fade-in">
-      <div className="mb-8">
+    <div className="max-w-lg mx-auto mt-12 space-y-6 animate-fade-in">
+      {/* Header */}
+      <div>
         <Link
           href={`/dashboard/disputes/${disputeId}`}
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
         >
-          &larr; Back to dispute
+          <ArrowLeft className="h-4 w-4" />
+          Back to dispute
         </Link>
-        <h1 className="text-2xl font-bold mt-4">Complete Payment</h1>
-        <p className="text-muted-foreground mt-1">
+        <div className="flex items-center gap-2 mb-2">
+          <h1 className="text-2xl font-bold">Complete Payment</h1>
+          {isDemoMode && (
+            <Badge variant="outline" className="text-blue-600 border-blue-300 bg-blue-50 dark:bg-blue-900/20">
+              <Sparkles className="h-3 w-3 mr-1" />
+              Demo
+            </Badge>
+          )}
+        </div>
+        <p className="text-muted-foreground">
           Pay ${(amount / 100).toFixed(2)} to activate your dispute workflow
         </p>
       </div>
 
-      <div className="bg-white border border-border rounded-lg p-6">
-        <div className="flex items-center justify-between mb-6 pb-4 border-b border-border">
-          <span className="font-medium">Dispute Workflow</span>
-          <span className="text-xl font-bold">${(amount / 100).toFixed(2)}</span>
-        </div>
-
-        {!stripePublishableKey ? (
-          <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
-            Payment provider is not configured. Add NEXT_PUBLIC_STRIPE_PK to the frontend environment.
+      {/* Order Summary */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Order Summary</CardTitle>
+          <CardDescription>Dispute workflow activation</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Dispute ID</span>
+            <span className="font-mono text-xs bg-muted px-2 py-1 rounded">{disputeId}</span>
           </div>
-        ) : clientSecret ? (
-          <Elements stripe={stripePromise} options={options}>
-            <PaymentForm
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Service</span>
+            <span className="font-medium">AI-Powered Dispute Analysis</span>
+          </div>
+          <div className="flex items-center justify-between text-base font-bold pt-3 border-t">
+            <span>Total</span>
+            <span className="text-primary">${(amount / 100).toFixed(2)}</span>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Payment Form */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Payment Details</CardTitle>
+          <CardDescription>Secure payment powered by Stripe</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isDemoMode ? (
+            <DemoPaymentForm
               disputeId={disputeId}
               amount={amount}
               onSuccess={handleSuccess}
               onError={handleError}
             />
-          </Elements>
-        ) : (
-          <div className="text-center py-4">
-            <p className="text-red-600">Failed to load payment form</p>
-          </div>
-        )}
-      </div>
+          ) : !stripePublishableKey ? (
+            <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 rounded-lg text-sm text-red-600 dark:text-red-400">
+              Payment provider is not configured. Add NEXT_PUBLIC_STRIPE_PK to the frontend environment.
+            </div>
+          ) : clientSecret ? (
+            <Elements stripe={stripePromise} options={options}>
+              <PaymentForm
+                disputeId={disputeId}
+                amount={amount}
+                onSuccess={handleSuccess}
+                onError={handleError}
+              />
+            </Elements>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-red-600 dark:text-red-400">Failed to load payment form</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
+      {/* Error Display */}
       {error && (
-        <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-red-600 text-sm font-medium">Payment Error</p>
-          <p className="text-red-500 text-sm mt-1">{error}</p>
-          <button
-            onClick={() => setRetryCount((c) => c + 1)}
-            className="mt-3 px-4 py-2 text-sm font-medium bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
-          >
-            Try Again
-          </button>
-        </div>
+        <Card className="border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-900/10">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-red-900 dark:text-red-300">Payment Error</p>
+                <p className="text-sm text-red-700 dark:text-red-400 mt-1">{error}</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setRetryCount((c) => c + 1)}
+                  className="mt-3"
+                >
+                  Try Again
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
-      <div className="mt-6 text-center">
+      {/* Footer */}
+      <div className="text-center">
         <p className="text-xs text-muted-foreground">
           Your payment is processed securely via Stripe.
           <br />

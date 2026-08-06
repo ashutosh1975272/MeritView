@@ -76,7 +76,7 @@ export async function createDispute(
         estimatedStakesUsd: data.estimatedStakesUsd ?? null,
         priceUsd: tierConfig.price,
         pricingTier: pricingTier as PricingTier,
-        state: 'PAYMENT_PENDING',  // Start in PAYMENT_PENDING — requires payment before briefs
+        state: 'DRAFT',  // Start in DRAFT — payment and briefs happen in unified workspace
         initiatorUserId: userId,
         parties: {
           create: [

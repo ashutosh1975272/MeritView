@@ -4,31 +4,26 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { StateBadge } from '@/components/StateBadge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Search, Filter, ChevronLeft, ChevronRight, Eye, FileText } from 'lucide-react';
 
-const STATE_COLORS: Record<string, string> = {
-  DRAFT: 'bg-gray-100 text-gray-700',
-  AWAITING_COUNTERPARTY: 'bg-blue-100 text-blue-700',
-  IN_PROGRESS: 'bg-yellow-100 text-yellow-700',
-  AWAITING_BRIEFS: 'bg-purple-100 text-purple-700',
-  AWAITING_COUNTERPARTY_BRIEF: 'bg-indigo-100 text-indigo-700',
-  UNDER_ANALYSIS: 'bg-orange-100 text-orange-700',
-  COMPLETED: 'bg-green-100 text-green-700',
-  WITHDRAWN: 'bg-red-100 text-red-700',
-  DECLINED: 'bg-red-100 text-red-700',
-};
-
-const STATES = ['', 'DRAFT', 'AWAITING_BRIEFS', 'UNDER_ANALYSIS', 'COMPLETED', 'WITHDRAWN', 'DECLINED'];
-
-function StateBadge({ state }: { state: string }) {
-  return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${STATE_COLORS[state] || 'bg-gray-100 text-gray-700'}`}>
-      {state.replace(/_/g, ' ')}
-    </span>
-  );
-}
+const STATES = ['DRAFT', 'AWAITING_BRIEFS', 'UNDER_ANALYSIS', 'COMPLETED', 'WITHDRAWN', 'DECLINED'];
 
 export default function AdminDisputesPage() {
-  const [stateFilter, setStateFilter] = useState('');
+  const [stateFilter, setStateFilter] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
   const limit = 20;
@@ -53,98 +48,135 @@ export default function AdminDisputesPage() {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-4 items-center">
-        <select
-          value={stateFilter}
-          onChange={(e) => { setStateFilter(e.target.value); setPage(1); }}
-          className="px-3 py-2 border border-border rounded-md text-sm bg-background"
-        >
-          <option value="">All States</option>
-          {STATES.filter(Boolean).map((s) => (
-            <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
-          ))}
-        </select>
-
-        <input
-          type="text"
-          placeholder="Search by title or summary..."
-          value={searchQuery}
-          onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
-          className="px-3 py-2 border border-border rounded-md text-sm bg-background min-w-[250px]"
-        />
-      </div>
+      {/* Filters */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-wrap gap-4 items-end">
+            <div className="space-y-2 flex-1 min-w-[200px]">
+              <Label htmlFor="search" className="text-sm font-medium">Search</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="search"
+                  placeholder="Search by title or summary..."
+                  value={searchQuery}
+                  onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
+                  className="pl-9"
+                />
+              </div>
+            </div>
+            <div className="space-y-2 w-48">
+              <Label htmlFor="state-filter" className="text-sm font-medium">State</Label>
+              <Select value={stateFilter} onValueChange={(value) => { setStateFilter(value === 'all' ? '' : (value || '')); setPage(1); }}>
+                <SelectTrigger id="state-filter">
+                  <SelectValue placeholder="All States" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All States</SelectItem>
+                  {STATES.map((s) => (
+                    <SelectItem key={s} value={s}>{s.replace(/_/g, ' ')}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button variant="outline" onClick={() => { setStateFilter(''); setSearchQuery(''); setPage(1); }} className="gap-2">
+              <Filter className="h-4 w-4" />
+              Clear
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {isLoading && (
-        <div className="space-y-3 animate-pulse">
+        <div className="space-y-3">
           {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="p-4 border border-border rounded-lg">
-              <div className="h-5 bg-gray-200 rounded w-3/4 mb-2" />
-              <div className="h-4 bg-gray-200 rounded w-1/2" />
-            </div>
+            <Card key={i}>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-4">
+                  <Skeleton className="h-5 w-3/4" />
+                  <Skeleton className="h-6 w-24" />
+                </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
       )}
 
       {isError && (
-        <div className="p-6 border border-red-200 bg-red-50 rounded-lg text-center">
-          <p className="text-red-600 font-medium">Failed to load disputes</p>
-          <p className="text-red-500 text-sm mt-1">{(error as any)?.message || 'An unexpected error occurred'}</p>
-        </div>
+        <Card className="border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-900/10">
+          <CardContent className="pt-6 text-center">
+            <p className="text-red-600 dark:text-red-400 font-medium">Failed to load disputes</p>
+            <p className="text-red-500 dark:text-red-400 text-sm mt-1">{(error as any)?.message || 'An unexpected error occurred'}</p>
+            <Button variant="outline" onClick={() => window.location.reload()} className="mt-4">
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
       )}
 
       {data && data.disputes.length === 0 && (
-        <div className="p-12 border border-border rounded-lg bg-card text-center">
-          <p className="text-muted-foreground">No disputes found matching your filters.</p>
-        </div>
+        <Card>
+          <CardContent className="pt-12 pb-12 text-center">
+            <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground">No disputes found matching your filters.</p>
+          </CardContent>
+        </Card>
       )}
 
       {data && data.disputes.length > 0 && (
         <>
-          <div className="overflow-x-auto border border-border rounded-lg">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/50">
-                <tr>
-                  <th className="text-left px-4 py-3 font-medium">Title</th>
-                  <th className="text-left px-4 py-3 font-medium">State</th>
-                  <th className="text-left px-4 py-3 font-medium">Party Count</th>
-                  <th className="text-left px-4 py-3 font-medium">Evaluations</th>
-                  <th className="text-left px-4 py-3 font-medium">Opinion</th>
-                  <th className="text-left px-4 py-3 font-medium">Created</th>
-                  <th className="text-left px-4 py-3 font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {data.disputes.map((dispute: any) => (
-                  <tr key={dispute.id} className="hover:bg-muted/30 transition-colors">
-                    <td className="px-4 py-3 font-medium max-w-[200px] truncate">{dispute.title}</td>
-                    <td className="px-4 py-3"><StateBadge state={dispute.state} /></td>
-                    <td className="px-4 py-3">{dispute._count?.parties || 0}</td>
-                    <td className="px-4 py-3">{dispute._count?.evaluatorOutputs || 0}</td>
-                    <td className="px-4 py-3">
-                      {dispute.opinion ? (
-                        <span className="text-green-600 text-xs font-medium">
-                          {dispute.opinion.deliveredAt ? 'Published' : 'Draft'}
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground text-xs">None</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground text-xs">
-                      {new Date(dispute.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-4 py-3">
-                      <Link
-                        href={`/admin/disputes/${dispute.id}`}
-                        className="text-primary hover:underline text-xs font-medium"
-                      >
-                        View
-                      </Link>
-                    </td>
+          <Card>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/50">
+                  <tr>
+                    <th className="text-left px-4 py-3 font-medium">Title</th>
+                    <th className="text-left px-4 py-3 font-medium">State</th>
+                    <th className="text-left px-4 py-3 font-medium">Parties</th>
+                    <th className="text-left px-4 py-3 font-medium">Evaluations</th>
+                    <th className="text-left px-4 py-3 font-medium">Opinion</th>
+                    <th className="text-left px-4 py-3 font-medium">Created</th>
+                    <th className="text-left px-4 py-3 font-medium">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {data.disputes.map((dispute: any) => (
+                    <tr key={dispute.id} className="hover:bg-muted/30 transition-colors">
+                      <td className="px-4 py-3">
+                        <Link href={`/admin/disputes/${dispute.id}`} className="font-medium hover:text-primary transition-colors max-w-[200px] block truncate">
+                          {dispute.title}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-3"><StateBadge state={dispute.state} /></td>
+                      <td className="px-4 py-3">{dispute._count?.parties || 0}</td>
+                      <td className="px-4 py-3">{dispute._count?.evaluatorOutputs || 0}</td>
+                      <td className="px-4 py-3">
+                        {dispute.opinion ? (
+                          <Badge variant={dispute.opinion.deliveredAt ? 'default' : 'secondary'} className="text-xs">
+                            {dispute.opinion.deliveredAt ? 'Published' : 'Draft'}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">None</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground text-xs">
+                        {new Date(dispute.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="px-4 py-3">
+                        <Link
+                          href={`/admin/disputes/${dispute.id}`}
+                          className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                          View
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
 
           {data.pagination.totalPages > 1 && (
             <div className="flex items-center justify-between pt-4">
@@ -152,20 +184,26 @@ export default function AdminDisputesPage() {
                 Page {data.pagination.page} of {data.pagination.totalPages} ({data.pagination.total} total)
               </p>
               <div className="flex gap-2">
-                <button
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page <= 1}
-                  className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="gap-1"
                 >
+                  <ChevronLeft className="h-4 w-4" />
                   Previous
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => setPage((p) => p + 1)}
                   disabled={page >= data.pagination.totalPages}
-                  className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="gap-1"
                 >
                   Next
-                </button>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
               </div>
             </div>
           )}

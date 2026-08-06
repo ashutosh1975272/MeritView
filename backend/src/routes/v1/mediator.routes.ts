@@ -68,7 +68,7 @@ const createPartnershipSchema = z.object({
   }),
 });
 
-router.post('/v1/mediators/register', authMiddleware(), validate(registerSchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+router.post('/mediators/register', authMiddleware(), validate(registerSchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const mediator = await registerAsMediator(req.user!.id, req.body);
     res.status(201).json(mediator);
@@ -77,7 +77,7 @@ router.post('/v1/mediators/register', authMiddleware(), validate(registerSchema)
   }
 });
 
-router.get('/v1/mediators/me', authMiddleware(), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+router.get('/mediators/me', authMiddleware(), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const mediator = await getMyMediatorProfile(req.user!.id);
     res.json(mediator);
@@ -86,7 +86,7 @@ router.get('/v1/mediators/me', authMiddleware(), async (req: AuthenticatedReques
   }
 });
 
-router.patch('/v1/mediators/me', authMiddleware(), validate(updateSchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+router.patch('/mediators/me', authMiddleware(), validate(updateSchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const mediator = await updateMediator(req.user!.id, req.body);
     res.json(mediator);
@@ -95,7 +95,7 @@ router.patch('/v1/mediators/me', authMiddleware(), validate(updateSchema), async
   }
 });
 
-router.get('/v1/mediators', validate(searchQuerySchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+router.get('/mediators', validate(searchQuerySchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const { specialties, region, minRating, limit, offset } = req.query as any;
     const result = await searchMediators({
@@ -111,7 +111,7 @@ router.get('/v1/mediators', validate(searchQuerySchema), async (req: Authenticat
   }
 });
 
-router.get('/v1/mediators/:mediatorId', validate(mediatorIdParam), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+router.get('/mediators/:mediatorId', validate(mediatorIdParam), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const mediator = await getMediator(req.params.mediatorId);
     res.json(mediator);
@@ -120,7 +120,7 @@ router.get('/v1/mediators/:mediatorId', validate(mediatorIdParam), async (req: A
   }
 });
 
-router.post('/v1/disputes/:disputeId/partnership', authMiddleware(), validate(createPartnershipSchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+router.post('/disputes/:disputeId/partnership', authMiddleware(), validate(createPartnershipSchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const partnership = await createPartnership(req.params.disputeId, req.body.mediatorId, req.user!.id);
     res.status(201).json(partnership);
@@ -129,7 +129,7 @@ router.post('/v1/disputes/:disputeId/partnership', authMiddleware(), validate(cr
   }
 });
 
-router.get('/v1/disputes/:disputeId/partnerships', authMiddleware(), validate(disputeIdParam), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+router.get('/disputes/:disputeId/partnerships', authMiddleware(), validate(disputeIdParam), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const partnerships = await getPartnershipsForDispute(req.params.disputeId, req.user!.id);
     res.json(partnerships);

@@ -34,3 +34,57 @@ services:
 volumes:
   postgres_data:
   redis_data:
+
+  backend:
+    build:
+      context: ../
+      dockerfile: Dockerfile.backend
+    container_name: meritview-backend
+    ports:
+      - "3001:3001"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/meritview
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=your-64-character-minimum-secret-key-here-change-in-production
+      - GEMINI_API_KEY=AIza_placeholder
+      - STRIPE_SECRET_KEY=sk_test_placeholder
+      - STRIPE_WEBHOOK_SECRET=whsec_placeholder
+      - S3_BUCKET=
+      - AWS_REGION=us-east-1
+      - FROM_EMAIL=noreply@meritview.app
+      - SMTP_HOST=
+      - SMTP_PORT=
+      - SMTP_USER=
+      - SMTP_PASS=
+      - SMTP_DKIM_DOMAIN=
+      - SMTP_DKIM_KEY_SELECTOR=
+      - SMTP_DKIM_PRIVATE_KEY=
+      - SENTRY_DSN=
+      - PORT=3001
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://meritview-frontend:3000
+      - ENCRYPTION_KEY_1=your-32-byte-encryption-key-base64-encoded
+      - ENCRYPTION_KEY_2=your-32-byte-encryption-key-base64-encoded
+      - RATE_LIMIT_WINDOW_MS=60000
+      - RATE_LIMIT_MAX_REQUESTS=100
+      - PRICE_STANDARD=99.00
+      - PRICE_EXPEDITED=199.00
+      - PRICE_EXTENDED=299.00
+      - PRICE_REANALYSIS=49.00
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile.frontend
+    container_name: meritview-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://meritview-backend:3001
+    depends_on:
+      - backend

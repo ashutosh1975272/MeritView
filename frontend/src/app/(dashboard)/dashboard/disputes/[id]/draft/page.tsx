@@ -8,6 +8,7 @@ import { apiClient } from '@/lib/api-client';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useToast } from '@/components/toast-provider';
 import { DisputeStatusPanel } from '@/components/disputes/DisputeStatusPanel';
+import { getApiErrorMessage } from '@/lib/api-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -75,6 +76,7 @@ export default function DraftWorkspacePage() {
   const [myRole, setMyRole] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const [sections, setSections] = useState<Record<string, string>>({
     factualBackground: '',
@@ -108,6 +110,7 @@ export default function DraftWorkspacePage() {
   const saveDraftMutation = useMutation({
     mutationFn: (sects: Record<string, string>) => apiClient.saveDraft(disputeId, partyId!, sects),
     onSuccess: (result) => {
+      setActionError(null);
       setBriefStatus(result.status);
       setLastSaved(new Date());
       queryClient.invalidateQueries({ queryKey: ['dispute', disputeId] });
@@ -117,35 +120,44 @@ export default function DraftWorkspacePage() {
   const submitBriefMutation = useMutation({
     mutationFn: (sects: Record<string, string>) => apiClient.submitBrief(disputeId, partyId!, sects),
     onSuccess: (result) => {
+      setActionError(null);
       setBriefStatus(result.brief.status);
       queryClient.invalidateQueries({ queryKey: ['dispute', disputeId] });
       showToast('Brief submitted successfully', 'success');
     },
     onError: (err: any) => {
-      showToast(err.message || 'Failed to submit brief', 'error');
+      const message = getApiErrorMessage(err, 'Failed to submit brief');
+      setActionError(message);
+      showToast(message, 'error');
     },
   });
 
   const inviteMutation = useMutation({
     mutationFn: (email: string) => apiClient.sendInvitation(disputeId, email),
     onSuccess: () => {
+      setActionError(null);
       setInviteEmail('');
       showToast('Invitation sent', 'success');
       refetchDispute();
     },
     onError: (err: any) => {
-      showToast(err.message || 'Failed to send invitation', 'error');
+      const message = getApiErrorMessage(err, 'Failed to send invitation');
+      setActionError(message);
+      showToast(message, 'error');
     },
   });
 
   const expireMutation = useMutation({
     mutationFn: (token: string) => apiClient.expireInvitation(token),
     onSuccess: () => {
+      setActionError(null);
       showToast('Invitation deleted', 'success');
       refetchDispute();
     },
     onError: (err: any) => {
-      showToast(err.message || 'Failed to delete invitation', 'error');
+      const message = getApiErrorMessage(err, 'Failed to delete invitation');
+      setActionError(message);
+      showToast(message, 'error');
     },
   });
 
@@ -198,9 +210,12 @@ export default function DraftWorkspacePage() {
     setIsSaving(true);
     try {
       await saveDraftMutation.mutateAsync(sections);
+      setActionError(null);
       setLastSaved(new Date());
     } catch (err: any) {
-      showToast(err.message || 'Failed to save draft', 'error');
+      const message = getApiErrorMessage(err, 'Failed to save draft');
+      setActionError(message);
+      showToast(message, 'error');
     } finally {
       setIsSaving(false);
     }
@@ -413,6 +428,16 @@ export default function DraftWorkspacePage() {
           {totalWordCount} / {MAX_WORDS} words
           {totalWordCount > MAX_WORDS && <span className="text-red-500 ml-2">Over limit</span>}
         </p>
+
+        {actionError && (
+          <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800 flex items-start gap-3">
+            <AlertCircle className="h-4 w-4 mt-0.5 text-red-600" />
+            <div className="space-y-1">
+              <p className="font-medium">Action failed</p>
+              <p>{actionError}</p>
+            </div>
+          </div>
+        )}
 
         {paymentSuccess && (
           <div className="p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">

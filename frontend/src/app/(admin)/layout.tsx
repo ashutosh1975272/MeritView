@@ -4,11 +4,21 @@ import { useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { 
+  LayoutDashboard, 
+  FileText, 
+  GitMerge, 
+  User, 
+  LogOut,
+  Shield
+} from 'lucide-react';
 
 const navigation = [
-  { name: 'Admin Dashboard', href: '/admin', icon: '📊' },
-  { name: 'Disputes', href: '/admin/disputes', icon: '⚖️' },
-  { name: 'Aggregations', href: '/admin/aggregations', icon: '🔗' },
+  { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
+  { name: 'Disputes', href: '/admin/disputes', icon: FileText },
+  { name: 'Aggregations', href: '/admin/aggregations', icon: GitMerge },
 ];
 
 export default function AdminLayout({
@@ -49,43 +59,45 @@ export default function AdminLayout({
       <header className="sticky top-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center justify-between px-4">
           <Link href="/admin" className="flex items-center gap-2 font-semibold text-lg">
-            <span className="text-2xl">⚖️</span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+              <Shield className="h-4 w-4" />
+            </div>
             <span>MeritView Admin</span>
           </Link>
 
           <nav className="hidden md:flex items-center gap-1" aria-label="Admin navigation">
-            {navigation.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href))
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                }`}
-                aria-current={pathname === item.href ? 'page' : undefined}
-              >
-                <span aria-hidden="true">{item.icon}</span>
-                <span>{item.name}</span>
-              </Link>
-            ))}
+            {navigation.map((item) => {
+              const Icon = item.icon;
+              const isActive = pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href));
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    isActive
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                  }`}
+                  aria-current={isActive ? 'page' : undefined}
+                >
+                  <Icon className="h-4 w-4" />
+                  <span>{item.name}</span>
+                </Link>
+              );
+            })}
           </nav>
 
-          <div className="flex items-center gap-4">
-            <Link
-              href="/dashboard"
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
-            >
-              <span aria-hidden="true">👤</span>
-              <span>User Dashboard</span>
-            </Link>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors focus-visible-ring"
-            >
-              <span aria-hidden="true">🚪</span>
-              <span>Logout</span>
-            </button>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost">
+              <Link href="/dashboard" className="gap-2 flex items-center">
+                <User className="h-4 w-4" />
+                <span className="hidden sm:inline">User Dashboard</span>
+              </Link>
+            </Button>
+            <Button variant="ghost" onClick={handleLogout} className="gap-2">
+              <LogOut className="h-4 w-4" />
+              <span className="hidden sm:inline">Logout</span>
+            </Button>
           </div>
         </div>
       </header>

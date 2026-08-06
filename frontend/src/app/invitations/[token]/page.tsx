@@ -1,257 +1,233 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { apiClient } from '@/lib/api-client';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
-export default function AcceptInvitationPublicPage() {
+type InvitationStatus = 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'EXPIRED' | 'NOT_SENT' | string;
+
+function normalizeEmail(email?: string | null) {
+  return email?.trim().toLowerCase() || '';
+}
+
+export default function InvitationLandingPage() {
   const params = useParams();
   const router = useRouter();
-  const { user, setTokens, setUser } = useAuthStore();
   const token = params.token as string;
-  
-  const [status, setStatus] = useState<'loading' | 'input' | 'success' | 'error'>('loading');
-  const [errorMsg, setErrorMsg] = useState('');
-  const [disputeId, setDisputeId] = useState('');
-  const [inviteData, setInviteData] = useState<any>(null);
+  const { user, setTokens, setUser, logout } = useAuthStore();
+  const [error, setError] = useState<string | null>(null);
+  const [isAccepting, setIsAccepting] = useState(false);
+  const autoAcceptAttemptedRef = useRef(false);
 
-  // Form states
-  const [mode, setMode] = useState<'guest' | 'register'>('guest');
-  const [displayName, setDisplayName] = useState('');
-  const [password, setPassword] = useState('');
-  const [acceptTerms, setAcceptTerms] = useState(false);
+  const { data: invitation, isLoading, isError, error: invitationError, refetch } = useQuery({
+    queryKey: ['invitation', token],
+    queryFn: () => apiClient.getInvitation(token),
+    enabled: !!token,
+    retry: false,
+  });
+
+  const callbackUrl = `/invitations/${token}`;
+  const loginHref = `/login?callbackUrl=${encodeURIComponent(callbackUrl)}${invitation?.email ? `&email=${encodeURIComponent(invitation.email)}` : ''}`;
+  const registerHref = `/register?callbackUrl=${encodeURIComponent(callbackUrl)}${invitation?.email ? `&email=${encodeURIComponent(invitation.email)}` : ''}`;
+
+  const invitationStatus = (invitation?.status || 'PENDING') as InvitationStatus;
+  const invitedEmail = normalizeEmail(invitation?.email);
+  const currentEmail = normalizeEmail(user?.email);
+  const isPending = invitationStatus === 'PENDING';
+  const isAccepted = invitationStatus === 'ACCEPTED';
+  const isExpired = invitationStatus === 'EXPIRED' || invitationStatus === 'DECLINED';
+  const emailMatches = !!user && invitedEmail && currentEmail === invitedEmail;
+
+  const acceptInvitation = async () => {
+    if (isAccepting) return;
+    setIsAccepting(true);
+    setError(null);
+
+    try {
+      const result = await apiClient.acceptInvitation(token);
+
+      if ((result as any).access_token && (result as any).refresh_token && (result as any).user) {
+        setTokens((result as any).access_token, (result as any).refresh_token);
+        setUser((result as any).user);
+      }
+
+      router.replace(`/dashboard/disputes/${result.disputeId}/draft`);
+      router.refresh();
+    } catch (err: any) {
+      setError(err.message || 'Failed to join invitation');
+    } finally {
+      setIsAccepting(false);
+    }
+  };
 
   useEffect(() => {
-    if (!token) return;
+    if (!invitation || !isPending || autoAcceptAttemptedRef.current || isAccepting) return;
+    if (!user || !emailMatches) return;
 
-    // Fetch invitation details first
-    const apiRoot = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001').replace(/\/v1\/?$/, '');
-    fetch(`${apiRoot}/v1/invitations/${token}`)
-      .then(res => res.json().then(data => ({ status: res.status, ok: res.ok, data })))
-      .then(({ ok, data }) => {
-        if (!ok) throw new Error(data?.error?.message || 'Failed to load invitation');
-        if (data.status !== 'PENDING') throw new Error(`Invitation is ${data.status}`);
-        setInviteData(data);
-        
-        // If already logged in as the invited user, try accepting immediately
-        if (user && user.email === data.email) {
-          submitAccept();
-        } else {
-          setStatus('input');
-        }
-      })
-      .catch((err) => {
-        setStatus('error');
-        setErrorMsg(err.message || 'Invalid or expired invitation');
-      });
-  }, [token, user]);
+    autoAcceptAttemptedRef.current = true;
+    void acceptInvitation();
+  }, [emailMatches, invitation, isAccepting, isPending, user]);
 
-  const submitAccept = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!user && !acceptTerms) {
-      setErrorMsg('You must accept the terms of service to join this dispute.');
-      return;
+  useEffect(() => {
+    if (invitationError) {
+      setError((invitationError as any)?.message || 'Invalid or expired invitation');
     }
+  }, [invitationError]);
 
-    setStatus('loading');
-    setErrorMsg('');
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-muted/20 px-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="py-12 text-center space-y-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
+            <p className="text-muted-foreground">Loading invitation...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
-    const payload: any = {};
-    if (!user) {
-      if (mode === 'guest') {
-        payload.displayName = displayName;
-        payload.acceptTerms = acceptTerms;
-      } else {
-        payload.createAccount = {
-          email: inviteData?.email,
-          password: password,
-          displayName: displayName
-        };
-        payload.acceptTerms = acceptTerms;
-      }
-    }
-
-    try {
-      const apiRoot = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001').replace(/\/v1\/?$/, '');
-      const res = await fetch(`${apiRoot}/v1/invitations/${token}/accept`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error?.message || 'Failed to accept');
-
-      setDisputeId(data.disputeId);
-      if (data.access_token && data.refresh_token && data.user) {
-        setTokens(data.access_token, data.refresh_token);
-        setUser(data.user);
-      }
-      setStatus('success');
-
-      setTimeout(() => router.push(`/dashboard/disputes/${data.disputeId}/brief`), 1200);
-    } catch (err: any) {
-      setStatus('error');
-      setErrorMsg(err.message || 'Failed to accept invitation');
-    }
-  };
-
-  const submitDecline = async () => {
-    setStatus('loading');
-    setErrorMsg('');
-
-    try {
-      const apiRoot = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001').replace(/\/v1\/?$/, '');
-      const res = await fetch(`${apiRoot}/v1/invitations/${token}/decline`, { method: 'POST' });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error?.message || 'Failed to decline');
-      setStatus('error');
-      setErrorMsg('Invitation declined. The dispute initiator will be notified.');
-    } catch (err: any) {
-      setStatus('error');
-      setErrorMsg(err.message || 'Failed to decline invitation');
-    }
-  };
+  if (error || !invitation) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-muted/20 px-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl">Invitation unavailable</CardTitle>
+            <CardDescription>This link has expired, was revoked, or is no longer valid.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4 text-center">
+            <p className="text-sm text-muted-foreground">{error}</p>
+            <Link href="/login" className="inline-flex h-8 w-full items-center justify-center rounded-lg bg-primary text-primary-foreground px-3 text-sm font-medium hover:bg-primary/80 transition-colors">
+              Go to Login
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/20 px-4">
-      <div className="max-w-md w-full p-8 bg-card border border-border rounded-xl shadow-lg">
-        <div className="text-center mb-6">
-          <div className="w-12 h-12 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto text-2xl mb-4">
+    <div className="min-h-screen flex items-center justify-center bg-muted/20 px-4 py-12">
+      <Card className="w-full max-w-lg border-border shadow-xl">
+        <CardHeader className="space-y-3 text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary text-2xl">
             ⚖️
           </div>
-          <h1 className="text-2xl font-bold">Dispute Invitation</h1>
-        </div>
-        
-        {status === 'loading' && (
-          <div className="space-y-4 text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
-            <p className="text-muted-foreground">Processing your invitation...</p>
-          </div>
-        )}
+          <CardTitle className="text-2xl font-bold">
+            {isPending ? 'You have been invited to join a dispute' : isAccepted ? 'You are already joined' : 'Invitation expired'}
+          </CardTitle>
+          <CardDescription>
+            {invitation.disputeTitle}
+          </CardDescription>
+        </CardHeader>
 
-        {status === 'input' && inviteData && (
-          <div className="space-y-6">
-            <div className="p-4 bg-muted/50 rounded-lg text-sm text-center">
-              <p>You have been invited to participate in the dispute:</p>
-              <p className="font-semibold text-foreground mt-1">{inviteData.disputeTitle}</p>
-              <p className="text-xs text-muted-foreground mt-3">
-                MeritView is AI decision support, not legal advice. Both parties submit briefs before a final opinion is generated.
+        <CardContent className="space-y-5">
+          <div className="rounded-lg border border-border bg-card p-4 text-sm space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-muted-foreground">Invite email</span>
+              <span className="font-medium break-all">{invitation.email}</span>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-muted-foreground">Status</span>
+              <span className="font-medium">{invitationStatus.replace(/_/g, ' ').toLowerCase()}</span>
+            </div>
+            {invitation.expiresAt && (
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-muted-foreground">Expires</span>
+                <span className="font-medium">{new Date(invitation.expiresAt).toLocaleString()}</span>
+              </div>
+            )}
+          </div>
+
+          {isPending && !user && (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                If you already have an account, sign in. If not, create one using the invited email and we will take you straight into the dispute workspace.
               </p>
-            </div>
-
-            <div className="flex gap-2 p-1 bg-muted rounded-lg">
-              <button 
-                onClick={() => setMode('guest')} 
-                className={`flex-1 text-sm py-2 rounded-md font-medium transition-colors ${mode === 'guest' ? 'bg-background shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-              >
-                Continue as Guest
-              </button>
-              <button 
-                onClick={() => setMode('register')} 
-                className={`flex-1 text-sm py-2 rounded-md font-medium transition-colors ${mode === 'register' ? 'bg-background shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-              >
-                Create Account
-              </button>
-            </div>
-
-            <form onSubmit={submitAccept} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Email</label>
-                <input type="email" value={inviteData.email} disabled className="w-full px-3 py-2 border rounded-md bg-muted text-muted-foreground text-sm" />
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Link href={loginHref} className="inline-flex h-8 w-full items-center justify-center rounded-lg bg-primary text-primary-foreground px-3 text-sm font-medium hover:bg-primary/80 transition-colors">
+                  I have an account
+                </Link>
+                <Link href={registerHref} className="inline-flex h-8 w-full items-center justify-center rounded-lg border border-border bg-background px-3 text-sm font-medium text-foreground hover:bg-muted transition-colors">
+                  Create account
+                </Link>
               </div>
+            </div>
+          )}
 
-              <div>
-                <label className="block text-sm font-medium mb-1">Full Name</label>
-                <input 
-                  type="text" 
-                  required 
-                  value={displayName} 
-                  onChange={e => setDisplayName(e.target.value)}
-                  className="w-full px-3 py-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary/50 text-sm"
-                  placeholder="John Doe" 
-                />
+          {isPending && user && emailMatches && (
+            <div className="space-y-3">
+              <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-900">
+                You are signed in as the invited email. Joining the dispute now...
               </div>
-
-              {mode === 'register' && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Password</label>
-                    <input 
-                      type="password" 
-                      required 
-                      value={password} 
-                      onChange={e => setPassword(e.target.value)}
-                      className="w-full px-3 py-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary/50 text-sm"
-                      placeholder="Min 8 chars, 1 letter, 1 number" 
-                    />
-                  </div>
-                </>
-              )}
-
-              {!user && (
-                <label className="flex items-start gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    required
-                    checked={acceptTerms}
-                    onChange={e => setAcceptTerms(e.target.checked)}
-                    className="mt-1"
-                  />
-                  <span className="text-muted-foreground">
-                    I agree to the <a href="/terms" target="_blank" className="text-primary hover:underline">Terms of Service</a>, <a href="/privacy" target="_blank" className="text-primary hover:underline">Privacy Policy</a>, and understand this is AI decision support, not legal advice.
-                  </span>
-                </label>
-              )}
-
-              {errorMsg && <p className="text-sm text-red-500 font-medium">{errorMsg}</p>}
-
-              <button type="submit" className="w-full py-2.5 bg-primary text-primary-foreground rounded-lg font-semibold hover:bg-primary/90 transition-colors mt-2">
-                Accept Invitation
-              </button>
-              <button
-                type="button"
-                onClick={submitDecline}
-                className="w-full py-2.5 border border-border text-foreground rounded-lg font-semibold hover:bg-muted/50 transition-colors"
-              >
-                Decline Invitation
-              </button>
-            </form>
-          </div>
-        )}
-
-        {status === 'success' && (
-          <div className="space-y-4 text-center">
-            <div className="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto text-xl">
-              ✓
+              <Button onClick={acceptInvitation} disabled={isAccepting} className="w-full">
+                {isAccepting ? 'Joining...' : 'Join dispute'}
+              </Button>
             </div>
-            <p className="text-foreground font-medium">Invitation accepted successfully!</p>
-            <p className="text-sm text-muted-foreground">You are now a party to this dispute.</p>
-            <button
-              onClick={() => router.push(`/dashboard/disputes/${disputeId}/brief`)}
-              className="w-full mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
-            >
-              Start Your Brief
-            </button>
-            <p className="text-sm text-primary animate-pulse mt-4">Redirecting to your brief...</p>
-          </div>
-        )}
+          )}
 
-        {status === 'error' && (
-          <div className="space-y-4 text-center">
-            <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto text-xl">
-              !
+          {isPending && user && !emailMatches && (
+            <div className="space-y-3">
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                You are signed in as <strong>{user.email}</strong>, but this invitation was sent to <strong>{invitation.email}</strong>.
+                Please switch accounts to continue.
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Link href={loginHref} className="inline-flex h-8 w-full items-center justify-center rounded-lg bg-primary text-primary-foreground px-3 text-sm font-medium hover:bg-primary/80 transition-colors">
+                  Sign in as invited email
+                </Link>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={async () => {
+                    await logout();
+                    router.push(loginHref);
+                  }}
+                >
+                  Sign out
+                </Button>
+              </div>
             </div>
-            <p className="text-red-600 font-medium">Invitation Error</p>
-            <p className="text-sm text-muted-foreground">{errorMsg}</p>
-            <button
-              onClick={() => router.push('/login')}
-              className="w-full mt-4 px-4 py-2 border border-border text-foreground rounded-md hover:bg-muted/50 transition-colors"
-            >
-              Go to Login
-            </button>
+          )}
+
+          {isAccepted && (
+            <div className="space-y-3">
+              <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-900">
+                This invitation has already been accepted.
+              </div>
+              <Link href={user ? `/dashboard/disputes/${invitation.disputeId}/draft` : loginHref} className="inline-flex h-8 w-full items-center justify-center rounded-lg bg-primary text-primary-foreground px-3 text-sm font-medium hover:bg-primary/80 transition-colors">
+                Open workspace
+              </Link>
+            </div>
+          )}
+
+          {isExpired && (
+            <div className="space-y-3">
+              <div className="rounded-lg border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
+                This invitation is no longer active. Ask the initiator to send a new invite if needed.
+              </div>
+              <Link href="/login" className="inline-flex h-8 w-full items-center justify-center rounded-lg border border-border bg-background px-3 text-sm font-medium text-foreground hover:bg-muted transition-colors">
+                Go to Login
+              </Link>
+            </div>
+          )}
+
+          {error && (
+            <p className="text-sm text-red-600" role="alert">
+              {error}
+            </p>
+          )}
+
+          <div className="pt-2 text-xs text-muted-foreground text-center">
+            Joining will open the dispute workspace where you can draft your own brief.
           </div>
-        )}
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -30,6 +30,9 @@ const envSchema = z.object({
   STRIPE_SECRET_KEY: z.string().optional().default(''),
   STRIPE_WEBHOOK_SECRET: z.string().optional().default(''),
   STRIPE_PRODUCT_ID: z.string().optional(),
+  STRIPE_TEST_MODE: z.string().default('false'),
+  DEMO_MODE: z.string().default('true'),
+  MIN_SUCCESSFUL_EVALUATIONS: z.coerce.number().int().positive().max(10).default(2),
   
   PRICE_STANDARD: z.coerce.number().positive().default(99.00),
   PRICE_EXPEDITED: z.coerce.number().positive().default(199.00),

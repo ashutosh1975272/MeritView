@@ -1,10 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { getApiErrorMessage, getApiFieldErrors } from '@/lib/api-error';
 
 interface RegisterForm {
   email: string;
@@ -17,18 +22,25 @@ interface RegisterForm {
 
 export default function RegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { register: registerUser } = useAuthStore();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
+  const invitedEmail = searchParams.get('email') || '';
 
   const {
+    control,
     register,
     handleSubmit,
     watch,
+    setError: setFieldError,
     formState: { errors },
   } = useForm<RegisterForm>({
     defaultValues: {
+      acceptTerms: false,
       marketingOptIn: false,
+      email: invitedEmail,
     },
   });
 
@@ -46,224 +58,248 @@ export default function RegisterPage() {
         acceptTerms: data.acceptTerms,
         marketingOptIn: data.marketingOptIn,
       });
-      router.push(`/verify-email?email=${encodeURIComponent(data.email)}`);
+      router.push(`/verify-email?email=${encodeURIComponent(data.email)}&callbackUrl=${encodeURIComponent(callbackUrl)}`);
       router.refresh();
     } catch (err: any) {
-      setError(err.message || 'Registration failed. Please try again.');
+      const fieldErrors = getApiFieldErrors(err);
+      Object.entries(fieldErrors).forEach(([field, message]) => {
+        if (field === 'email' || field === 'password' || field === 'displayName' || field === 'acceptTerms') {
+          setFieldError(field as keyof RegisterForm, { type: 'server', message });
+        }
+      });
+      setError(getApiErrorMessage(err, 'Registration failed. Please try again.'));
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4 py-12 relative">
-      <Link href="/" className="absolute left-4 top-4 md:left-8 md:top-8 inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-50 to-white px-4 py-12 relative">
+      {/* Back to home */}
+      <Link
+        href="/"
+        className="absolute left-4 top-4 md:left-8 md:top-8 inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="m15 18-6-6 6-6" />
+        </svg>
         Home
       </Link>
-      <Link href="/login" className="absolute right-4 top-4 md:right-8 md:top-8 inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2">
+
+      {/* Login link */}
+      <Link
+        href={`/login?callbackUrl=${encodeURIComponent(callbackUrl)}${invitedEmail ? `&email=${encodeURIComponent(invitedEmail)}` : ''}`}
+        className="absolute right-4 top-4 md:right-8 md:top-8 inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors hover:bg-slate-100 hover:text-slate-900 h-9 px-4 py-2 text-slate-600"
+      >
         Login
       </Link>
 
-      <div className="w-full max-w-md space-y-8">
-        <div className="text-center">
-          <Link href="/" className="inline-flex items-center gap-2 font-semibold text-2xl mb-6">
-            <span className="text-3xl">⚖️</span>
-            <span>MeritView</span>
-          </Link>
-          <h1 className="text-3xl font-bold tracking-tight">Create your account</h1>
-          <p className="text-muted-foreground mt-2">
-            Already have an account?{' '}
-            <Link href="/login" className="text-primary hover:underline">
-              Sign in
+      <Card className="w-full max-w-[440px] border-slate-200 shadow-xl shadow-slate-200/50">
+        <CardHeader className="space-y-3 text-center pb-6 pt-8">
+          <div className="flex justify-center mb-2">
+            <Link href="/" className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-600/20">
+                <span className="text-xl font-bold">MV</span>
+              </div>
             </Link>
-          </p>
-        </div>
+          </div>
+          <CardTitle className="text-2xl font-bold text-slate-900 tracking-tight">Create your account</CardTitle>
+          <CardDescription className="text-base text-slate-500">
+            Start resolving disputes with AI-powered analysis
+          </CardDescription>
+        </CardHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" noValidate>
+        <CardContent className="px-8 pb-8">
           {error && (
-            <div
-              className="p-4 bg-destructive/10 border border-destructive/20 text-destructive rounded-lg text-sm"
-              role="alert"
-            >
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm" role="alert">
               {error}
             </div>
           )}
 
-          <div className="space-y-2">
-            <label htmlFor="email" className="block text-sm font-medium">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              autoComplete="email"
-              {...register('email', {
-                required: 'Email is required',
-                pattern: {
-                  value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                  message: 'Invalid email address',
-                },
-              })}
-              className={`w-full px-3 py-2 border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent ${
-                errors.email ? 'border-destructive' : 'border-input'
-              }`}
-              disabled={isLoading}
-              aria-invalid={errors.email ? 'true' : 'false'}
-              aria-describedby={errors.email ? 'email-error' : undefined}
-            />
-            {errors.email && (
-              <p id="email-error" className="text-sm text-destructive" role="alert">
-                {errors.email.message}
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <label htmlFor="displayName" className="block text-sm font-medium">
-              Display Name (optional)
-            </label>
-            <input
-              id="displayName"
-              type="text"
-              autoComplete="name"
-              maxLength={100}
-              {...register('displayName', {
-                maxLength: {
-                  value: 100,
-                  message: 'Display name must be 100 characters or less',
-                },
-              })}
-              className={`w-full px-3 py-2 border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent ${
-                errors.displayName ? 'border-destructive' : 'border-input'
-              }`}
-              disabled={isLoading}
-            />
-            {errors.displayName && (
-              <p className="text-sm text-destructive" role="alert">
-                {errors.displayName.message}
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <label htmlFor="password" className="block text-sm font-medium">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              autoComplete="new-password"
-              {...register('password', {
-                required: 'Password is required',
-                minLength: {
-                  value: 8,
-                  message: 'Password must be at least 8 characters',
-                },
-                pattern: {
-                  value: /^(?=.*[A-Za-z])(?=.*\d)/,
-                  message: 'Password must contain at least 1 letter and 1 number',
-                },
-              })}
-              className={`w-full px-3 py-2 border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent ${
-                errors.password ? 'border-destructive' : 'border-input'
-              }`}
-              disabled={isLoading}
-              aria-invalid={errors.password ? 'true' : 'false'}
-              aria-describedby={errors.password ? 'password-error' : undefined}
-            />
-            {errors.password && (
-              <p id="password-error" className="text-sm text-destructive" role="alert">
-                {errors.password.message}
-              </p>
-            )}
-            <p className="text-xs text-muted-foreground">
-              At least 8 characters with 1 letter and 1 number
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <label htmlFor="confirmPassword" className="block text-sm font-medium">
-              Confirm Password
-            </label>
-            <input
-              id="confirmPassword"
-              type="password"
-              autoComplete="new-password"
-              {...register('confirmPassword', {
-                required: 'Please confirm your password',
-                validate: (value) => value === password || 'Passwords do not match',
-              })}
-              className={`w-full px-3 py-2 border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent ${
-                errors.confirmPassword ? 'border-destructive' : 'border-input'
-              }`}
-              disabled={isLoading}
-              aria-invalid={errors.confirmPassword ? 'true' : 'false'}
-            />
-            {errors.confirmPassword && (
-              <p className="text-sm text-destructive" role="alert">
-                {errors.confirmPassword.message}
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-start gap-3">
-              <input
-                id="acceptTerms"
-                type="checkbox"
-                {...register('acceptTerms', {
-                  required: 'You must accept the terms',
-                  value: true,
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-sm font-medium text-slate-700">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="name@example.com"
+                autoComplete="email"
+                {...register('email', {
+                  required: 'Email is required',
+                  pattern: {
+                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                    message: 'Invalid email address',
+                  },
                 })}
-                className="mt-1 h-4 w-4 rounded border-input text-primary focus:ring-2 focus:ring-ring focus:ring-offset-2"
                 disabled={isLoading}
+                aria-invalid={errors.email ? 'true' : 'false'}
+                aria-describedby={errors.email ? 'email-error' : undefined}
               />
-              <label htmlFor="acceptTerms" className="text-sm text-muted-foreground">
-                I agree to the{' '}
-                <Link href="/terms" className="text-primary hover:underline">
-                  Terms of Service
-                </Link>{' '}
-                and{' '}
-                <Link href="/privacy" className="text-primary hover:underline">
-                  Privacy Policy
-                </Link>
-                <span className="text-destructive">*</span>
+              {errors.email && (
+                <p id="email-error" className="text-sm text-red-600" role="alert">
+                  {errors.email.message}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="displayName" className="text-sm font-medium text-slate-700">Display Name (optional)</Label>
+              <Input
+                id="displayName"
+                type="text"
+                placeholder="John Doe"
+                autoComplete="name"
+                maxLength={100}
+                {...register('displayName', {
+                  maxLength: {
+                    value: 100,
+                    message: 'Display name must be 100 characters or less',
+                  },
+                })}
+                disabled={isLoading}
+                aria-invalid={errors.displayName ? 'true' : 'false'}
+                aria-describedby={errors.displayName ? 'displayName-error' : undefined}
+              />
+              {errors.displayName && (
+                <p id="displayName-error" className="text-sm text-red-600" role="alert">
+                  {errors.displayName.message}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password" className="text-sm font-medium text-slate-700">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                autoComplete="new-password"
+                {...register('password', {
+                  required: 'Password is required',
+                  minLength: {
+                    value: 8,
+                    message: 'Password must be at least 8 characters',
+                  },
+                  pattern: {
+                    value: /^(?=.*[A-Za-z])(?=.*\d)/,
+                    message: 'Password must contain at least 1 letter and 1 number',
+                  },
+                })}
+                disabled={isLoading}
+                aria-invalid={errors.password ? 'true' : 'false'}
+                aria-describedby={errors.password ? 'password-error' : undefined}
+              />
+              {errors.password && (
+                <p id="password-error" className="text-sm text-red-600" role="alert">
+                  {errors.password.message}
+                </p>
+              )}
+              <p className="text-xs text-slate-500">
+                At least 8 characters with 1 letter and 1 number
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword" className="text-sm font-medium text-slate-700">Confirm Password</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                autoComplete="new-password"
+                {...register('confirmPassword', {
+                  required: 'Please confirm your password',
+                  validate: (value) => value === password || 'Passwords do not match',
+                })}
+                disabled={isLoading}
+                aria-invalid={errors.confirmPassword ? 'true' : 'false'}
+                aria-describedby={errors.confirmPassword ? 'confirmPassword-error' : undefined}
+              />
+              {errors.confirmPassword && (
+                <p id="confirmPassword-error" className="text-sm text-red-600" role="alert">
+                  {errors.confirmPassword.message}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-start gap-3">
+                <Controller
+                  name="acceptTerms"
+                  control={control}
+                  rules={{ validate: (value) => value === true || 'You must accept the terms' }}
+                  render={({ field }) => (
+                    <input
+                      id="acceptTerms"
+                      type="checkbox"
+                      checked={!!field.value}
+                      onChange={(e) => field.onChange(e.target.checked)}
+                      onBlur={field.onBlur}
+                      name={field.name}
+                      ref={field.ref}
+                      className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                      disabled={isLoading}
+                      aria-invalid={errors.acceptTerms ? 'true' : 'false'}
+                      aria-describedby={errors.acceptTerms ? 'acceptTerms-error' : undefined}
+                    />
+                  )}
+                />
+                <label htmlFor="acceptTerms" className="text-sm text-slate-600 leading-tight">
+                  I agree to the{' '}
+                  <Link href="/terms" className="text-blue-600 hover:text-blue-700 font-medium">Terms of Service</Link>
+                  {' '}and{' '}
+                  <Link href="/privacy" className="text-blue-600 hover:text-blue-700 font-medium">Privacy Policy</Link>
+                  <span className="text-red-600">*</span>
+                </label>
+              </div>
+              {errors.acceptTerms && (
+                <p id="acceptTerms-error" className="text-sm text-red-600 ml-7" role="alert">
+                  {errors.acceptTerms.message}
+                </p>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Controller
+                name="marketingOptIn"
+                control={control}
+                render={({ field }) => (
+                  <input
+                    id="marketingOptIn"
+                    type="checkbox"
+                    checked={!!field.value}
+                    onChange={(e) => field.onChange(e.target.checked)}
+                    onBlur={field.onBlur}
+                    name={field.name}
+                    ref={field.ref}
+                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                    disabled={isLoading}
+                  />
+                )}
+              />
+              <label htmlFor="marketingOptIn" className="text-sm text-slate-600 leading-tight">
+                Send me product updates and tips (optional)
               </label>
             </div>
-            {errors.acceptTerms && (
-              <p className="text-sm text-destructive ml-7" role="alert">
-                {errors.acceptTerms.message}
-              </p>
-            )}
-          </div>
 
-          <div className="flex items-center gap-3">
-            <input
-              id="marketingOptIn"
-              type="checkbox"
-              {...register('marketingOptIn')}
-              className="h-4 w-4 rounded border-input text-primary focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            <Button
+              type="submit"
+              className="w-full h-11 text-base font-medium"
               disabled={isLoading}
-            />
-            <label htmlFor="marketingOptIn" className="text-sm text-muted-foreground">
-              Send me product updates and tips (optional)
-            </label>
+            >
+              {isLoading ? 'Creating account...' : 'Create account'}
+            </Button>
+          </form>
+
+          <div className="mt-6 text-center text-sm text-slate-500">
+            Already have an account?{' '}
+            <Link href={`/login?callbackUrl=${encodeURIComponent(callbackUrl)}${invitedEmail ? `&email=${encodeURIComponent(invitedEmail)}` : ''}`} className="text-blue-600 hover:text-blue-700 font-medium">
+              Sign in
+            </Link>
           </div>
 
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full py-2.5 px-4 bg-primary text-primary-foreground rounded-md font-medium hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {isLoading ? 'Creating account...' : 'Create account'}
-          </button>
-        </form>
-
-        <p className="text-center text-xs text-muted-foreground">
-          We&apos;ll send a verification email to your address. Check your inbox (and spam folder) after signing up.
-        </p>
-      </div>
+          <p className="text-center text-xs text-slate-400 mt-5">
+            We&apos;ll send a verification email to your address. Check your inbox (and spam folder) after signing up.
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 }

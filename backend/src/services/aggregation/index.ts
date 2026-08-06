@@ -2,9 +2,10 @@ import { prisma } from '../../db/prisma';
 import { logger } from '../../utils/logger';
 import { encrypt } from '../../utils/crypto';
 import { createAuditEvent } from '../../utils/audit';
-import { BadRequestError, NotFoundError, ConflictError } from '../../utils/errors';
+import { BadRequestError, NotFoundError, ConflictError, InternalError } from '../../utils/errors';
 import { AGGREGATE_PROMPT_VERSION } from '../../prompts/aggregate-v1.0';
 import { generateId } from '../../utils/id';
+import { getEnv } from '../../config/env';
 
 const REQUIRED_DISCLAIMERS = [
   'This analysis is for informational purposes only and does not constitute legal advice.',
@@ -13,7 +14,7 @@ const REQUIRED_DISCLAIMERS = [
   'MeritView makes no guarantees about the accuracy or completeness of this analysis.',
 ];
 
-const MIN_EVALUATOR_OUTPUTS = 3;
+const MIN_EVALUATOR_OUTPUTS = getEnv().MIN_SUCCESSFUL_EVALUATIONS;
 
 export async function getPendingAggregations() {
   const disputes = await prisma.dispute.findMany({
@@ -409,6 +410,15 @@ export async function aggregateEvaluations(disputeId: string) {
       logger.warn('Failed to parse aggregator output', { disputeId });
     }
   } catch (err) {
-    logger.error('Aggregation failed', err as Error);
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    logger.error('Aggregation failed', err as Error, { disputeId });
+    await prisma.dispute.update({
+      where: { id: disputeId },
+      data: {
+        state: 'FAILED',
+        stateChangedAt: new Date(),
+      },
+    });
+    throw new InternalError(`Aggregation failed: ${errorMessage}`);
   }
 }

@@ -27,11 +27,11 @@ async function main() {
 
   // Create test user
   const testEmail = 'test@meritview.app';
-  const testPassword = await bcrypt.hash('test123', 12);
+  const testPassword = await bcrypt.hash('TestPass123', 12);
 
   const testUser = await prisma.user.upsert({
     where: { email: testEmail },
-    update: {},
+    update: { passwordHash: testPassword },
     create: {
       email: testEmail,
       passwordHash: testPassword,

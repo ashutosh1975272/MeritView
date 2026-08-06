@@ -103,6 +103,8 @@ import { invitationRouter } from './routes/v1/invitations.routes';
 import { documentRouter } from './routes/v1/documents.routes';
 import { supportRouter } from './routes/v1/support.routes';
 import { mediatorRouter } from './routes/v1/mediator.routes';
+import { debugRouter } from './routes/v1/debug.routes';
+import { briefPrepRouter } from './routes/v1/brief-prep.routes';
 
 app.use(i18nMiddleware);
 app.use('/v1/auth', authRouter);
@@ -111,13 +113,14 @@ app.use('/v1/disputes', disputeRouter);
 app.use('/v1', briefRouter);
 app.use('/v1', paymentRouter);
 app.use('/webhooks', webhookRouter);
-app.use(evaluationRouter);
-app.use('/v1', adminRouter);
-app.use(opinionRouter);
-app.use(invitationRouter);
-app.use(mediatorRouter);
-app.use(documentRouter);
-app.use(supportRouter);
+app.use('/v1', evaluationRouter);
+app.use('/v1', opinionRouter);
+app.use('/v1', invitationRouter);
+app.use('/v1', mediatorRouter);
+app.use('/v1', documentRouter);
+app.use('/v1', supportRouter);
+app.use('/v1/debug', debugRouter);
+app.use('/v1', briefPrepRouter);
 
 app.use(notFoundHandler);
 

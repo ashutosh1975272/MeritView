@@ -56,6 +56,7 @@ model Dispute {
   updatedAt          DateTime           @updatedAt
   completedAt        DateTime?
   deletedAt          DateTime?
+  evaluationLock     Boolean            @default(false) @map("evaluation_lock")
   briefPrepSessions  BriefPrepSession[]
   briefs             Brief[]
   initiator          User               @relation("DisputeInitiator", fields: [initiatorUserId], references: [id])
@@ -110,6 +111,8 @@ model Brief {
   wordCount              Int        @map("word_count")
   supportingDocumentIds  String[]   @map("supporting_document_ids")
   status                 BriefState @default(DRAFT)
+  version                Int        @default(1)
+  lastEditedAt           DateTime?  @map("last_edited_at")
   createdAt              DateTime   @default(now())
   updatedAt              DateTime   @updatedAt
   submittedAt            DateTime?  @map("submitted_at")
@@ -304,6 +307,21 @@ model Payment {
   @@index([disputeId], map: "idx_payments_dispute")
   @@index([userId], map: "idx_payments_user")
   @@map("payments")
+}
+
+model DownloadReceipt {
+  id           String   @id @default(uuid())
+  disputeId    String   @map("dispute_id")
+  userId       String   @map("user_id")
+  opinionId    String?  @map("opinion_id")
+  documentType String   @db.VarChar(50)
+  ipAddress    String?  @db.VarChar(45)
+  userAgent    String?
+  downloadedAt DateTime @default(now()) @map("downloaded_at")
+
+  @@index([disputeId], map: "idx_download_receipts_dispute")
+  @@index([userId], map: "idx_download_receipts_user")
+  @@map("download_receipts")
 }
 
 model AuditEvent {

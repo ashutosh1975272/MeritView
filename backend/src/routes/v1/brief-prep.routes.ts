@@ -18,7 +18,7 @@ const sendMessageSchema = z.object({
 });
 
 router.post(
-  '/v1/disputes/:disputeId/parties/:partyId/brief-prep/session',
+  '/disputes/:disputeId/parties/:partyId/brief-prep/session',
   authMiddleware(),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
@@ -53,7 +53,7 @@ router.post(
 );
 
 router.post(
-  '/v1/disputes/:disputeId/parties/:partyId/brief-prep/session/:sessionId/message',
+  '/disputes/:disputeId/parties/:partyId/brief-prep/session/:sessionId/message',
   authMiddleware(),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
@@ -81,7 +81,7 @@ router.post(
 );
 
 router.get(
-  '/v1/disputes/:disputeId/parties/:partyId/brief-prep/session/:sessionId',
+  '/disputes/:disputeId/parties/:partyId/brief-prep/session/:sessionId',
   authMiddleware(),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
