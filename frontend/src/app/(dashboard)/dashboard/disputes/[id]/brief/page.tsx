@@ -205,9 +205,9 @@ export default function BriefPage() {
     if (!partyId) return;
     setShowConfirmDialog(false);
 
-    const emptySections = SECTION_KEYS.filter(key => !sections[key] || sections[key].trim().length === 0);
-    if (emptySections.length > 0) {
-      setError(`Please fill in: ${emptySections.map(k => SECTION_LABELS[k]).join(', ')}`);
+    const filledSections = SECTION_KEYS.filter(key => sections[key] && sections[key].trim().length > 0);
+    if (filledSections.length === 0) {
+      setError('Please add at least one section before submitting');
       return;
     }
 
@@ -225,9 +225,9 @@ export default function BriefPage() {
   }
 
   const totalWordCount = SECTION_KEYS.reduce((sum, key) => sum + countWords(sections[key]), 0);
-  const allSectionsFilled = SECTION_KEYS.every(key => sections[key] && sections[key].trim().length > 0);
-  const missingSections = SECTION_KEYS.filter(key => !sections[key] || sections[key].trim().length === 0);
-  const canSubmit = allSectionsFilled && !isSubmitting && totalWordCount <= MAX_WORDS;
+  const filledSections = SECTION_KEYS.filter(key => sections[key] && sections[key].trim().length > 0);
+  const hasAnyContent = filledSections.length > 0;
+  const canSubmit = hasAnyContent && !isSubmitting && totalWordCount <= MAX_WORDS;
   const isSealed = briefStatus === 'SEALED' || briefStatus === 'SUBMITTED';
   const wordProgress = Math.min((totalWordCount / MAX_WORDS) * 100, 100);
 
@@ -275,7 +275,7 @@ export default function BriefPage() {
 
       <div className="flex-1 min-h-0 flex flex-col lg:flex-row">
       {/* LEFT PANE: AI Chat Assistant */}
-      <div className={`${activeMobileView === 'assistant' ? 'flex' : 'hidden'} lg:flex w-full lg:w-1/3 flex-col border-r border-border bg-card shadow-sm h-full rounded-tl-xl rounded-bl-xl overflow-hidden`}>
+      <div className={`${activeMobileView === 'assistant' ? 'flex' : 'hidden'} lg:flex w-full lg:w-1/3 flex-col border-r border-border bg-card shadow-sm h-full min-h-0 rounded-tl-xl rounded-bl-xl overflow-hidden`}>
         <div className="p-4 border-b border-border bg-primary/5 flex items-center justify-between">
           <div>
             <h2 className="font-semibold text-lg flex items-center gap-2">
@@ -302,7 +302,7 @@ export default function BriefPage() {
           </div>
         </div>
         
-        <ScrollArea className="flex-1 p-4 space-y-4 bg-muted/20">
+        <ScrollArea className="flex-1 min-h-0 p-4 space-y-4 bg-muted/20">
           {messages.map((msg, idx) => (
             <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div className={`max-w-[85%] rounded-xl px-4 py-2.5 text-sm ${
@@ -352,7 +352,7 @@ export default function BriefPage() {
       </div>
 
       {/* RIGHT PANE: Brief Editor */}
-      <div className={`${activeMobileView === 'editor' ? 'flex' : 'hidden'} lg:flex w-full lg:w-2/3 flex-col h-full bg-background relative`}>
+      <div className={`${activeMobileView === 'editor' ? 'flex' : 'hidden'} lg:flex w-full lg:w-2/3 flex-col h-full min-h-0 bg-background relative`}>
         
         {/* Header */}
         <div className="p-5 border-b border-border bg-background flex items-center justify-between shadow-sm z-10 sticky top-0">
@@ -395,18 +395,18 @@ export default function BriefPage() {
               <Button
                 onClick={() => setShowConfirmDialog(true)}
                 disabled={!canSubmit}
-                title={!allSectionsFilled ? 'Fill all five brief sections before submitting' : totalWordCount > MAX_WORDS ? 'Brief exceeds maximum word count' : 'Submit final sealed brief'}
+                title={!hasAnyContent ? 'Add at least one section before submitting' : totalWordCount > MAX_WORDS ? 'Brief exceeds maximum word count' : 'Submit available sections'}
                 className="gap-2"
               >
                 <CheckCircle2 className="h-4 w-4" />
-                Submit Brief
+                Submit Available Sections
               </Button>
             </div>
           )}
         </div>
 
         {/* Form Fields */}
-        <ScrollArea className="flex-1 p-6">
+        <ScrollArea className="flex-1 min-h-0 p-6">
           <div className="max-w-3xl space-y-8">
             {error && (
               <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-400 rounded-lg text-sm flex items-start gap-2">
@@ -423,6 +423,9 @@ export default function BriefPage() {
                     <p className="text-sm font-medium text-blue-900 dark:text-blue-300">Your private workspace</p>
                     <p className="text-sm text-blue-700 dark:text-blue-400 mt-1">
                       Your draft and AI assistant messages are visible only to you until you submit your final sealed brief.
+                    </p>
+                    <p className="text-xs text-blue-700/80 dark:text-blue-400/80 mt-2">
+                      All sections are optional. Add only what you want, and the latest saved values will be used when you submit.
                     </p>
                   </div>
                 </div>
@@ -476,26 +479,27 @@ export default function BriefPage() {
       <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Submit Final Brief?</DialogTitle>
+            <DialogTitle>Submit Available Sections?</DialogTitle>
             <DialogDescription>
-              This action cannot be undone. Once submitted, your brief will be permanently sealed until all parties have submitted.
+              This action cannot be undone. Any filled sections will be sealed and submitted, while blank sections stay empty.
             </DialogDescription>
           </DialogHeader>
 
           <Card className="border-border bg-muted/30">
             <CardContent className="pt-4">
-              <p className="font-medium text-sm mb-3">Submission checklist</p>
-              <ul className="space-y-2">
-                {SECTION_KEYS.map((key) => {
-                  const complete = !missingSections.includes(key);
-                  return (
-                    <li key={key} className={`flex items-center gap-2 text-sm ${complete ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                      {complete ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+              <p className="font-medium text-sm mb-3">Sections included</p>
+              {filledSections.length > 0 ? (
+                <ul className="space-y-2">
+                  {filledSections.map((key) => (
+                    <li key={key} className="flex items-center gap-2 text-sm text-green-700 dark:text-green-400">
+                      <CheckCircle2 className="h-4 w-4" />
                       {SECTION_LABELS[key]}
                     </li>
-                  );
-                })}
-              </ul>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-muted-foreground">No sections have content yet.</p>
+              )}
               {totalWordCount > MAX_WORDS && (
                 <p className="text-red-600 dark:text-red-400 mt-3 text-sm flex items-center gap-2">
                   <AlertCircle className="h-4 w-4" />
@@ -510,7 +514,7 @@ export default function BriefPage() {
               Cancel
             </Button>
             <Button onClick={handleSubmit} disabled={!canSubmit}>
-              {isSubmitting ? 'Submitting...' : canSubmit ? 'Submit Final Brief' : 'Complete All Sections'}
+              {isSubmitting ? 'Submitting...' : canSubmit ? 'Submit Brief' : 'Add Any Content'}
             </Button>
           </DialogFooter>
         </DialogContent>

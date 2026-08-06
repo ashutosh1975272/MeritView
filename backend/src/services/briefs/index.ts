@@ -1,7 +1,7 @@
 import { prisma } from '../../db/prisma';
 import crypto from 'crypto';
 import { encrypt, decrypt } from '../../utils/crypto';
-import { ForbiddenError, NotFoundError, ValidationError, ConflictError } from '../../utils/errors';
+import { ForbiddenError, NotFoundError, ValidationError, ConflictError, BadRequestError } from '../../utils/errors';
 import { logger } from '../../utils/logger';
 import { addEmailJob } from '../../jobs/queues';
 import { DisputeState } from '@prisma/client';
@@ -77,7 +77,7 @@ export async function saveDraft(
   userId: string,
   sections: BriefSections,
   supportingDocumentIds?: string[],
-): Promise<{ id: string; status: string; wordCount: number }> {
+): Promise<{ id: string; status: string; wordCount: number; version: number }> {
   const dispute = await prisma.dispute.findUnique({
     where: { id: disputeId, deletedAt: null },
   });
@@ -205,21 +205,20 @@ export async function submitBrief(
     throw new ForbiddenError('You are not a member of this party');
   }
 
-  const requiredSections: (keyof BriefSections)[] = [
-    'factualBackground',
-    'myPosition',
-    'supportingArguments',
-    'acknowledgmentOfOpposing',
-    'desiredResolution',
-  ];
+  const normalizedSections: BriefSections = {};
+  const hasAnyContent = Object.entries(sections).some(([, value]) => (value || '').trim().length > 0);
 
-  for (const section of requiredSections) {
-    if (!sections[section] || sections[section]!.trim().length === 0) {
-      throw new ValidationError(`Section "${section}" is required and must not be empty`);
+  if (!hasAnyContent) {
+    throw new ValidationError('At least one brief section is required');
+  }
+
+  for (const [key, value] of Object.entries(sections) as [keyof BriefSections, string][]) {
+    if (value && value.trim().length > 0) {
+      normalizedSections[key] = value;
     }
   }
 
-  const wordCount = getTotalWordCount(sections);
+  const wordCount = getTotalWordCount(normalizedSections);
   if (wordCount > MAX_WORD_COUNT) {
     throw new ValidationError(`Total word count exceeds maximum of ${MAX_WORD_COUNT}`);
   }
@@ -229,7 +228,7 @@ export async function submitBrief(
   }
 
   const moderationResult = contentModerationCheck(
-    Object.values(sections).filter(Boolean).join(' ')
+    Object.values(normalizedSections).filter(Boolean).join(' ')
   );
 
   await createAuditEvent({
@@ -258,7 +257,7 @@ export async function submitBrief(
     throw new ForbiddenError('Brief is sealed and cannot be edited');
   }
 
-  const serialized = serializeSectionsForEncryption(sections);
+  const serialized = serializeSectionsForEncryption(normalizedSections);
   const { encryptedContent, contentEncryptionKeyId } = encrypt(serialized);
 
   const sealHash = cryptoCreateHash(encryptedContent);
@@ -420,6 +419,8 @@ export async function getBrief(
   updatedAt: Date;
   submittedAt: Date | null;
   sealedAt: Date | null;
+  version: number;
+  lastEditedAt: Date | null;
 }> {
   const dispute = await prisma.dispute.findUnique({
     where: { id: disputeId, deletedAt: null },
@@ -467,7 +468,7 @@ export async function getBrief(
   if (brief.sealHash) {
     const computedHash = cryptoCreateHash(brief.encryptedContent);
     if (computedHash !== brief.sealHash) {
-      logger.error('Brief seal hash mismatch', { briefId: brief.id, disputeId, expected: brief.sealHash, actual: computedHash });
+      logger.error('Brief seal hash mismatch', undefined, { briefId: brief.id, disputeId, expected: brief.sealHash, actual: computedHash });
       throw new BadRequestError('Brief integrity check failed. Please contact support.');
     }
   }
