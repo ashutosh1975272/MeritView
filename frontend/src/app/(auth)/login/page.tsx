@@ -9,11 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-
-type LoginForm = {
-  email: string;
-  password: string;
-};
+import { zodResolver } from '@hookform/resolvers/zod';
+import { loginSchema, LoginFormValues } from '@/schemas/auth';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -30,14 +27,15 @@ export default function LoginPage() {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<LoginForm>({
+  } = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
     mode: 'onBlur',
     defaultValues: {
       email: invitedEmail,
     },
   });
 
-  const onSubmit = async (data: LoginForm) => {
+  const onSubmit = async (data: LoginFormValues) => {
     setError(null);
     setIsLoading(true);
 
@@ -111,13 +109,7 @@ export default function LoginPage() {
                 type="email"
                 placeholder="name@example.com"
                 autoComplete="email"
-                {...register('email', {
-                  required: 'Email is required',
-                  pattern: {
-                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                    message: 'Invalid email format',
-                  },
-                })}
+                {...register('email')}
                 disabled={isLoading || authLoading}
                 aria-invalid={errors.email ? 'true' : 'false'}
                 aria-describedby={errors.email ? 'email-error' : undefined}
@@ -143,13 +135,7 @@ export default function LoginPage() {
                 id="password"
                 type="password"
                 autoComplete="current-password"
-                {...register('password', {
-                  required: 'Password is required',
-                  minLength: {
-                    value: 8,
-                    message: 'Password must be at least 8 characters',
-                  },
-                })}
+                {...register('password')}
                 disabled={isLoading || authLoading}
                 aria-invalid={errors.password ? 'true' : 'false'}
                 aria-describedby={errors.password ? 'password-error' : undefined}

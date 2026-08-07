@@ -11,3 +11,6 @@ frontend/tsconfig.tsbuildinfo
 .kilo/
 e2e_test.sh
 *.patch
+branch_structure.json
+temp_auto_push.bat
+temp_interactive_push.bat
