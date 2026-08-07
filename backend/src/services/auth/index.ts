@@ -10,6 +10,7 @@ import {
   ConflictError
 } from '../../utils/errors';
 import * as bcrypt from 'bcrypt';
+import * as argon2 from 'argon2';
 import * as jwt from 'jsonwebtoken';
 import * as crypto from 'crypto';
 import { addEmailJob } from '../../jobs/queues';
@@ -18,7 +19,6 @@ import { generateId } from '../../utils/id';
 
 const env = getEnv();
 
-const BCRYPT_COST = 12;
 const REFRESH_TOKEN_TTL = 7 * 24 * 60 * 60; // 7 days
 const PASSWORD_RESET_TTL = 60 * 60; // 1 hour
 const VERIFICATION_TOKEN_TTL = 24 * 60 * 60; // 24 hours
@@ -174,7 +174,7 @@ export async function registerUser(data: {
     throw new ValidationError('Password must be 8-128 characters with at least 1 letter and 1 number');
   }
 
-  const passwordHash = await bcrypt.hash(data.password, BCRYPT_COST);
+  const passwordHash = await argon2.hash(data.password);
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   const otpHash = hashToken(otp);
 
@@ -298,7 +298,20 @@ export async function loginUser(email: string, password: string, ipAddress?: str
     throw new UnauthorizedError('Please use OAuth to sign in');
   }
 
-  const valid = await bcrypt.compare(password, user.passwordHash);
+  let valid = false;
+  if (user.passwordHash.startsWith('$2')) {
+    valid = await bcrypt.compare(password, user.passwordHash);
+    if (valid) {
+      const newHash = await argon2.hash(password);
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { passwordHash: newHash },
+      });
+    }
+  } else {
+    valid = await argon2.verify(user.passwordHash, password);
+  }
+
   if (!valid) {
     await recordFailedAttempt(normalizedEmail);
     throw new UnauthorizedError('Invalid credentials');
@@ -355,7 +368,13 @@ export async function enableTotp(userId: string, password: string): Promise<{ se
     throw new ValidationError('Password-based login required to enable TOTP');
   }
 
-  const valid = await bcrypt.compare(password, user.passwordHash);
+  let valid = false;
+  if (user.passwordHash.startsWith('$2')) {
+    valid = await bcrypt.compare(password, user.passwordHash);
+  } else {
+    valid = await argon2.verify(user.passwordHash, password);
+  }
+
   if (!valid) {
     throw new UnauthorizedError('Invalid password');
   }
@@ -396,7 +415,13 @@ export async function disableTotp(userId: string, password: string): Promise<voi
     throw new ValidationError('Password-based login required to disable TOTP');
   }
 
-  const valid = await bcrypt.compare(password, user.passwordHash);
+  let valid = false;
+  if (user.passwordHash.startsWith('$2')) {
+    valid = await bcrypt.compare(password, user.passwordHash);
+  } else {
+    valid = await argon2.verify(user.passwordHash, password);
+  }
+
   if (!valid) {
     throw new UnauthorizedError('Invalid password');
   }
@@ -542,7 +567,7 @@ export async function completePasswordReset(token: string, newPassword: string, 
     throw new ValidationError('Password must be 8-128 characters with at least 1 letter and 1 number');
   }
 
-  const passwordHash = await bcrypt.hash(newPassword, BCRYPT_COST);
+  const passwordHash = await argon2.hash(newPassword);
   
   await prisma.user.update({
     where: { id: userId },

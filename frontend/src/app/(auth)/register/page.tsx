@@ -11,14 +11,8 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { getApiErrorMessage, getApiFieldErrors } from '@/lib/api-error';
 
-interface RegisterForm {
-  email: string;
-  password: string;
-  confirmPassword: string;
-  displayName: string;
-  acceptTerms: boolean;
-  marketingOptIn: boolean;
-}
+import { zodResolver } from '@hookform/resolvers/zod';
+import { registerSchema, RegisterFormValues } from '@/schemas/auth';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -33,10 +27,10 @@ export default function RegisterPage() {
     control,
     register,
     handleSubmit,
-    watch,
     setError: setFieldError,
     formState: { errors },
-  } = useForm<RegisterForm>({
+  } = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerSchema),
     defaultValues: {
       acceptTerms: false,
       marketingOptIn: false,
@@ -44,9 +38,7 @@ export default function RegisterPage() {
     },
   });
 
-  const password = watch('password');
-
-  const onSubmit = async (data: RegisterForm) => {
+  const onSubmit = async (data: RegisterFormValues) => {
     setError(null);
     setIsLoading(true);
 
@@ -64,7 +56,7 @@ export default function RegisterPage() {
       const fieldErrors = getApiFieldErrors(err);
       Object.entries(fieldErrors).forEach(([field, message]) => {
         if (field === 'email' || field === 'password' || field === 'displayName' || field === 'acceptTerms') {
-          setFieldError(field as keyof RegisterForm, { type: 'server', message });
+          setFieldError(field as keyof RegisterFormValues, { type: 'server', message });
         }
       });
       setError(getApiErrorMessage(err, 'Registration failed. Please try again.'));
@@ -124,13 +116,7 @@ export default function RegisterPage() {
                 type="email"
                 placeholder="name@example.com"
                 autoComplete="email"
-                {...register('email', {
-                  required: 'Email is required',
-                  pattern: {
-                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                    message: 'Invalid email address',
-                  },
-                })}
+                {...register('email')}
                 disabled={isLoading}
                 aria-invalid={errors.email ? 'true' : 'false'}
                 aria-describedby={errors.email ? 'email-error' : undefined}
@@ -150,12 +136,7 @@ export default function RegisterPage() {
                 placeholder="John Doe"
                 autoComplete="name"
                 maxLength={100}
-                {...register('displayName', {
-                  maxLength: {
-                    value: 100,
-                    message: 'Display name must be 100 characters or less',
-                  },
-                })}
+                {...register('displayName')}
                 disabled={isLoading}
                 aria-invalid={errors.displayName ? 'true' : 'false'}
                 aria-describedby={errors.displayName ? 'displayName-error' : undefined}
@@ -173,17 +154,7 @@ export default function RegisterPage() {
                 id="password"
                 type="password"
                 autoComplete="new-password"
-                {...register('password', {
-                  required: 'Password is required',
-                  minLength: {
-                    value: 8,
-                    message: 'Password must be at least 8 characters',
-                  },
-                  pattern: {
-                    value: /^(?=.*[A-Za-z])(?=.*\d)/,
-                    message: 'Password must contain at least 1 letter and 1 number',
-                  },
-                })}
+                {...register('password')}
                 disabled={isLoading}
                 aria-invalid={errors.password ? 'true' : 'false'}
                 aria-describedby={errors.password ? 'password-error' : undefined}
@@ -204,10 +175,7 @@ export default function RegisterPage() {
                 id="confirmPassword"
                 type="password"
                 autoComplete="new-password"
-                {...register('confirmPassword', {
-                  required: 'Please confirm your password',
-                  validate: (value) => value === password || 'Passwords do not match',
-                })}
+                {...register('confirmPassword')}
                 disabled={isLoading}
                 aria-invalid={errors.confirmPassword ? 'true' : 'false'}
                 aria-describedby={errors.confirmPassword ? 'confirmPassword-error' : undefined}
@@ -224,7 +192,6 @@ export default function RegisterPage() {
                 <Controller
                   name="acceptTerms"
                   control={control}
-                  rules={{ validate: (value) => value === true || 'You must accept the terms' }}
                   render={({ field }) => (
                     <input
                       id="acceptTerms"

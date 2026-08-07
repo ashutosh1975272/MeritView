@@ -3,6 +3,7 @@ import { registerUser, verifyEmail, loginUser, refreshTokens, logoutUser, reques
 import { prisma } from '../../db/prisma';
 import { redis } from '../../config/redis';
 import * as bcrypt from 'bcrypt';
+import * as argon2 from 'argon2';
 import * as jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { ForbiddenError, NotFoundError, UnauthorizedError, ValidationError, ConflictError } from '../../utils/errors';
@@ -51,6 +52,11 @@ vi.mock('bcrypt', () => ({
   compare: vi.fn(),
 }));
 
+vi.mock('argon2', () => ({
+  hash: vi.fn(),
+  verify: vi.fn(),
+}));
+
 vi.mock('jsonwebtoken', () => ({
   sign: vi.fn(),
   verify: vi.fn(),
@@ -81,7 +87,7 @@ describe('Auth Service', () => {
   describe('registerUser', () => {
     it('should register a new user successfully', async () => {
       (prisma.user.findUnique as any).mockResolvedValue(null);
-      (bcrypt.hash as any).mockResolvedValue('hashed_password');
+      (argon2.hash as any).mockResolvedValue('hashed_password');
       (redis.setex as any).mockResolvedValue('OK');
       
       const result = await registerUser({
@@ -160,7 +166,7 @@ describe('Auth Service', () => {
       };
 
       (prisma.user.findUnique as any).mockResolvedValue(mockUser);
-      (bcrypt.compare as any).mockResolvedValue(true);
+      (argon2.verify as any).mockResolvedValue(true);
       (jwt.sign as any).mockReturnValue('access_token');
       (redis.setex as any).mockResolvedValue('OK');
       (prisma.user.update as any).mockResolvedValue({ ...mockUser, lastLoginAt: new Date() });
@@ -185,7 +191,7 @@ describe('Auth Service', () => {
         emailVerified: true,
         deletedAt: null,
       });
-      (bcrypt.compare as any).mockResolvedValue(false);
+      (argon2.verify as any).mockResolvedValue(false);
 
       await expect(loginUser('test@example.com', 'wrong_password')).rejects.toThrow(UnauthorizedError);
     });
@@ -198,7 +204,7 @@ describe('Auth Service', () => {
         emailVerified: false,
         deletedAt: null,
       });
-      (bcrypt.compare as any).mockResolvedValue(true);
+      (argon2.verify as any).mockResolvedValue(true);
 
       await expect(loginUser('test@example.com', 'password123')).rejects.toThrow(ForbiddenError);
     });
@@ -263,7 +269,7 @@ describe('Auth Service', () => {
   describe('completePasswordReset', () => {
     it('should reset password with valid token', async () => {
       (redis.get as any).mockResolvedValue(JSON.stringify({ userId: 'user_123', ipAddress: undefined, userAgent: undefined, createdAt: Date.now() }));
-      (bcrypt.hash as any).mockResolvedValue('new_hashed_password');
+      (argon2.hash as any).mockResolvedValue('new_hashed_password');
       (prisma.user.update as any).mockResolvedValue({ id: 'user_123', passwordHash: 'new_hashed_password' });
       (redis.del as any).mockResolvedValue(1);
       (redis.keys as any).mockResolvedValue([]);
