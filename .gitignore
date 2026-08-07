@@ -7,3 +7,7 @@ dist/
 coverage/
 .turbo/
 frontend/tsconfig.tsbuildinfo
+.github_backup/
+.kilo/
+e2e_test.sh
+*.patch
